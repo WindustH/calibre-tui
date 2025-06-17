@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -26,7 +26,6 @@ use unicode_width::UnicodeWidthStr;
 // --- 主题和配色 ---
 struct Theme {
     fg: Color,
-    // **修复**: 移除了未使用的 'bg' 字段
     input_fg: Color,
     border: Color,
     header_fg: Color,
@@ -95,14 +94,33 @@ impl App {
     }
 
     fn filter_books(&mut self) {
-        let input_lower = self.input.to_lowercase().replace(" ", "");
+        let input_lower = self.input.to_lowercase().replace(' ', "");
+        if input_lower.is_empty() {
+            self.filtered_books = self.all_books.clone();
+            if !self.filtered_books.is_empty() {
+                self.table_state.select(Some(0));
+            } else {
+                self.table_state.select(None);
+            }
+            return;
+        }
+
+        let fuzzy_input = to_fuzzy_pinyin(&input_lower);
+
         self.filtered_books = self.all_books
             .iter()
             .filter(|book| {
+                // Fuzzify the book's pinyin
+                let fuzzy_title_pinyin = to_fuzzy_pinyin(&book.title_pinyin);
+                let fuzzy_author_pinyin = to_fuzzy_pinyin(&book.author_pinyin);
+
+                // Check all conditions
                 book.title.to_lowercase().contains(&input_lower)
                     || book.author.to_lowercase().contains(&input_lower)
                     || book.title_pinyin.contains(&input_lower)
                     || book.author_pinyin.contains(&input_lower)
+                    || (!fuzzy_input.is_empty() && fuzzy_title_pinyin.contains(&fuzzy_input))
+                    || (!fuzzy_input.is_empty() && fuzzy_author_pinyin.contains(&fuzzy_input))
             })
             .cloned()
             .collect();
@@ -254,35 +272,54 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
         terminal.draw(|f| ui(f, app))?;
 
         if event::poll(Duration::from_millis(250))? {
-            if let Event::Key(key) = event::read()? {
-                app.status_message = None;
-                match key.code {
-                    KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => {
-                        app.should_quit = true;
+            match event::read()? {
+                Event::Key(key) => {
+                    app.status_message = None;
+                    match key.code {
+                        KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => {
+                            app.should_quit = true;
+                        }
+                        KeyCode::Esc => {
+                            app.should_quit = true;
+                        }
+                        KeyCode::Char(c) => {
+                            app.input.push(c);
+                            app.filter_books();
+                        }
+                        KeyCode::Backspace => {
+                            app.input.pop();
+                            app.filter_books();
+                        }
+                        KeyCode::Down => app.next_item(),
+                        KeyCode::Up => app.previous_item(),
+                        KeyCode::Enter => app.open_selected_book(),
+                        _ => {}
                     }
-                    KeyCode::Esc => {
-                        app.should_quit = true;
-                    }
-                    KeyCode::Char(c) => {
-                        app.input.push(c);
-                        app.filter_books();
-                    }
-                    KeyCode::Backspace => {
-                        app.input.pop();
-                        app.filter_books();
-                    }
-                    KeyCode::Down => app.next_item(),
-                    KeyCode::Up => app.previous_item(),
-                    KeyCode::Enter => app.open_selected_book(),
-                    _ => {}
                 }
+                Event::Mouse(mouse_event) => {
+                    match mouse_event.kind {
+                        MouseEventKind::ScrollDown => app.next_item(),
+                        MouseEventKind::ScrollUp => app.previous_item(),
+                        _ => {}
+                    }
+                }
+                _ => {} // Ignore other events
             }
         }
     }
 }
 
+/// 将pinyin字符串转换为模糊形式以便匹配
+/// e.g., zh -> z, ang -> an, l -> n
+fn to_fuzzy_pinyin(pinyin: &str) -> String {
+    pinyin
+        .replace("ang", "an")
+        .replace("eng", "en")
+        .replace("ing", "in")
+        .replace("ong", "on")
+}
 
-/// 创建一个带精确高亮匹配项的行 (支持普通文本和拼音)
+/// 创建一个带精确高亮匹配项的行 (支持普通文本、精确拼音和模糊拼音)
 fn create_highlighted_line<'a>(text: &'a str, query: &'a str) -> Line<'a> {
     if query.is_empty() {
         return Line::from(Span::raw(text));
@@ -309,8 +346,8 @@ fn create_highlighted_line<'a>(text: &'a str, query: &'a str) -> Line<'a> {
         return Line::from(spans);
     }
 
-    // --- 2. 如果上面不匹配，则进行拼音匹配 ---
-    let lower_query_no_space = lower_query.replace(" ", "");
+    // --- 2. 如果上面不匹配，则进行拼音匹配 (包括模糊匹配) ---
+    let lower_query_no_space = lower_query.replace(' ', "");
     if lower_query_no_space.chars().all(|c| c.is_ascii_alphabetic()) {
         let char_pinyin_map: Vec<(char, String)> = text.chars().zip(
             text.to_pinyin().map(|p_opt| {
@@ -320,9 +357,9 @@ fn create_highlighted_line<'a>(text: &'a str, query: &'a str) -> Line<'a> {
 
         let full_pinyin: String = char_pinyin_map.iter().map(|(_, p)| p.as_str()).collect();
 
+        // 尝试精确拼音匹配
         if let Some(match_start_idx) = full_pinyin.find(&lower_query_no_space) {
             let match_end_idx = match_start_idx + lower_query_no_space.len();
-
             let mut spans = Vec::new();
             let mut current_pinyin_len = 0;
 
@@ -343,11 +380,44 @@ fn create_highlighted_line<'a>(text: &'a str, query: &'a str) -> Line<'a> {
             }
             return Line::from(spans);
         }
+
+        // 尝试模糊拼音匹配
+        let fuzzy_query = to_fuzzy_pinyin(&lower_query_no_space);
+        let char_fuzzy_pinyin_map: Vec<String> = char_pinyin_map
+            .iter()
+            .map(|(_, p)| to_fuzzy_pinyin(p))
+            .collect();
+        let fuzzy_full_pinyin: String = char_fuzzy_pinyin_map.join("");
+
+        if !fuzzy_query.is_empty() {
+            if let Some(match_start_idx) = fuzzy_full_pinyin.find(&fuzzy_query) {
+                let match_end_idx = match_start_idx + fuzzy_query.len();
+                let mut spans = Vec::new();
+                let mut current_fuzzy_pinyin_len = 0;
+
+                for (i, (character, _)) in char_pinyin_map.iter().enumerate() {
+                    let fuzzy_pinyin_str = &char_fuzzy_pinyin_map[i];
+                    let fuzzy_pinyin_len = fuzzy_pinyin_str.len();
+                    let pinyin_range_start = current_fuzzy_pinyin_len;
+                    let pinyin_range_end = current_fuzzy_pinyin_len + fuzzy_pinyin_len;
+
+                    if fuzzy_pinyin_len > 0 && std::cmp::max(pinyin_range_start, match_start_idx) < std::cmp::min(pinyin_range_end, match_end_idx) {
+                        spans.push(Span::styled(
+                            character.to_string(),
+                            Style::default().fg(Color::Green).add_modifier(Modifier::UNDERLINED),
+                        ));
+                    } else {
+                        spans.push(Span::raw(character.to_string()));
+                    }
+                    current_fuzzy_pinyin_len += fuzzy_pinyin_len;
+                }
+                return Line::from(spans);
+            }
+        }
     }
 
     Line::from(Span::raw(text))
 }
-
 
 /// 绘制 UI 界面
 fn ui(f: &mut Frame, app: &mut App) {
@@ -397,7 +467,7 @@ fn ui(f: &mut Frame, app: &mut App) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(theme.border))
-                .title(" Book List (↑/↓) ")
+                .title(" Book List (↑/↓/Scroll) ")
         )
         .highlight_style(theme.selection_style);
 
