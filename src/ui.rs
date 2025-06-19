@@ -76,6 +76,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 &app.canonical_map,
                 parse_color(fg_color_str),
                 parse_color(&col_config.highlighted_match_fg),
+                app.config.pinyin_search_enabled,
             );
 
             Cell::from(line).style(Style::default().bg(parse_color(bg_color_str)))
@@ -101,30 +102,33 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         .highlight_style(Style::default());
 
     f.render_stateful_widget(table, chunks[1], &mut app.table_state);
-
-    // Removed the status bar widget rendering.
 }
 
+/// Creates a line with highlighted matches for both direct substring and pinyin searches.
 fn create_highlighted_line<'a>(
     text: &'a str,
     query: &'a str,
     canonical_map: &HashMap<String, String>,
     base_fg_color: Color,
     highlight_fg_color: Color,
+    pinyin_search_enabled: bool,
 ) -> Line<'a> {
     if query.is_empty() {
         return Line::from(Span::styled(text, Style::default().fg(base_fg_color)));
     }
 
     let base_style = Style::default().fg(base_fg_color);
-
+    let highlight_style = Style::default()
+        .fg(highlight_fg_color)
+        .add_modifier(Modifier::UNDERLINED);
     let lower_query = query.to_lowercase();
 
+    // 1. Direct Substring Match
     if let Some((match_byte_start, _)) = text
         .char_indices()
         .find(|(i, _)| text[*i..].to_lowercase().starts_with(&lower_query))
     {
-        let query_char_len = lower_query.chars().count();
+        let query_char_len = query.chars().count();
         let match_byte_end = text[match_byte_start..]
             .char_indices()
             .nth(query_char_len)
@@ -133,61 +137,89 @@ fn create_highlighted_line<'a>(
 
         return Line::from(vec![
             Span::styled(&text[..match_byte_start], base_style),
-            Span::styled(
-                &text[match_byte_start..match_byte_end],
-                Style::default()
-                    .fg(highlight_fg_color)
-                    .add_modifier(Modifier::UNDERLINED),
-            ),
+            Span::styled(&text[match_byte_start..match_byte_end], highlight_style),
             Span::styled(&text[match_byte_end..], base_style),
         ]);
     }
 
+    // 2. Pinyin Match (if enabled)
+    if !pinyin_search_enabled {
+        return Line::from(Span::styled(text, base_style));
+    }
+
     let lower_query_no_space = lower_query.replace(' ', "");
-    if lower_query_no_space.is_empty()
-        || !lower_query_no_space
-            .chars()
-            .all(|c| c.is_ascii_alphabetic())
-    {
+    if lower_query_no_space.is_empty() {
+        return Line::from(Span::styled(text, base_style));
+    }
+
+    // FIX: Allow numbers in pinyin search query
+    let is_pinyin_searchable = lower_query_no_space
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric());
+
+    if !is_pinyin_searchable {
         return Line::from(Span::styled(text, base_style));
     }
 
     let canonical_query = to_canonical_pinyin(&lower_query_no_space, canonical_map);
 
-    let text_chars: Vec<_> = text.chars().collect();
-    for i in 0..text_chars.len() {
-        let mut current_canonical_pinyin = String::new();
-        for j in i..text_chars.len() {
-            let char_as_str = text_chars[j].to_string();
-            let pinyin_char = get_simple_pinyin(&char_as_str);
-            let canonical_pinyin_char = to_canonical_pinyin(&pinyin_char, canonical_map);
-            current_canonical_pinyin.push_str(&canonical_pinyin_char);
+    // Generate pinyin for each character in the text, converting to lowercase.
+    // Non-Chinese characters (like numbers/letters) will be used as-is.
+    let text_pinyins_canonical: Vec<String> = text
+        .chars()
+        .map(|c| {
+            let pinyin = get_simple_pinyin(&c.to_string());
+            to_canonical_pinyin(&pinyin, canonical_map).to_lowercase()
+        })
+        .collect();
 
-            if !canonical_query.starts_with(&current_canonical_pinyin) {
+    let combined_pinyin = text_pinyins_canonical.join("");
+
+    // FIX: Use `find` for partial pinyin matches and map back to characters.
+    // This makes highlighting consistent with the `contains` logic in the search filter.
+    if let Some(match_start_pinyin_idx) = combined_pinyin.find(&canonical_query) {
+        let mut pinyin_len_so_far = 0;
+        let mut start_char_idx = 0;
+        let mut end_char_idx = 0;
+
+        // Find the character index where the match starts
+        for (i, pinyin) in text_pinyins_canonical.iter().enumerate() {
+            if pinyin_len_so_far + pinyin.len() > match_start_pinyin_idx {
+                start_char_idx = i;
                 break;
             }
+            pinyin_len_so_far += pinyin.len();
+        }
 
-            if current_canonical_pinyin == canonical_query {
-                let prefix: String = text_chars[..i].iter().collect();
-                let highlighted: String = text_chars[i..=j].iter().collect();
-                let suffix: String = if j + 1 < text_chars.len() {
-                    text_chars[j + 1..].iter().collect()
-                } else {
-                    String::new()
-                };
+        let match_end_pinyin_idx = match_start_pinyin_idx + canonical_query.len();
+        pinyin_len_so_far = 0;
 
-                return Line::from(vec![
-                    Span::styled(prefix, base_style),
-                    Span::styled(
-                        highlighted,
-                        Style::default()
-                            .fg(highlight_fg_color)
-                            .add_modifier(Modifier::UNDERLINED),
-                    ),
-                    Span::styled(suffix, base_style),
-                ]);
+        // Find the character index where the match ends
+        let mut found_end = false;
+        for (i, pinyin) in text_pinyins_canonical.iter().enumerate() {
+            pinyin_len_so_far += pinyin.len();
+            if pinyin_len_so_far >= match_end_pinyin_idx {
+                end_char_idx = i;
+                found_end = true;
+                break;
             }
         }
+        if !found_end {
+             end_char_idx = text_pinyins_canonical.len() - 1;
+        }
+
+        let text_chars: Vec<_> = text.chars().collect();
+        let prefix: String = text_chars[..start_char_idx].iter().collect();
+        let highlighted: String = text_chars[start_char_idx..=end_char_idx].iter().collect();
+        let suffix: String = text_chars
+            .get(end_char_idx + 1..)
+            .map_or(String::new(), |s| s.iter().collect());
+
+        return Line::from(vec![
+            Span::styled(prefix, base_style),
+            Span::styled(highlighted, highlight_style),
+            Span::styled(suffix, base_style),
+        ]);
     }
 
     Line::from(Span::styled(text, base_style))
