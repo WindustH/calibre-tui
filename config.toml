@@ -1,1 +1,60 @@
-# library_path = "your library path"
+library_path = ""
+pinyin_search_enabled = true
+fuzzy_pinyin = [
+    ["z", "zh"],
+    ["c", "ch"],
+    ["s", "sh"],
+    ["an", "ang"],
+    ["en", "eng"],
+    ["in", "ing"],
+    ["l", "n"],
+]
+
+[[columns]]
+name = "title"
+width_ratio = 40
+fg = "#dddddd"
+bg = "Reset"
+selected_fg = "Yellow"
+selected_bg = "rgb(80, 80, 80)"
+header_fg = "LightCyan"
+highlighted_match_fg = "Red"
+
+[[columns]]
+name = "author"
+width_ratio = 20
+fg = "Cyan"
+bg = "Reset"
+selected_fg = "White"
+selected_bg = "Blue"
+header_fg = "Cyan"
+highlighted_match_fg = "Green"
+
+[[columns]]
+name = "series"
+width_ratio = 20
+fg = "Green"
+bg = "Reset"
+selected_fg = "White"
+selected_bg = "Blue"
+header_fg = "Green"
+highlighted_match_fg = "Yellow"
+
+[[columns]]
+name = "tags"
+width_ratio = 20
+fg = "Magenta"
+bg = "Reset"
+selected_fg = "White"
+selected_bg = "Blue"
+header_fg = "Magenta"
+highlighted_match_fg = "Cyan"
+
+# --- 全局颜色配置 ---
+[colors]
+search_box_border_fg = "Blue"
+table_border_fg = "Blue"
+search_box_title = "Yellow"
+search_box_text = "White"
+table_title_fg = "Blue"
+status_bar_fg = "DarkGray"
