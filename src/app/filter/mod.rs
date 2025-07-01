@@ -61,7 +61,7 @@ impl<'a> super::Filter<'a> {
             let mut versions = Info::new();
             // prebuild tags and authors into string
             let authors_str = book.authors.join(" & ");
-            let tags_str = book.tags.join(" , ");
+            let tags_str = book.tags.join(", ");
 
             // generate default version
             let default_variant = Version {

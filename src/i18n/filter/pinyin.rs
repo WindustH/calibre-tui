@@ -74,17 +74,9 @@ impl Pinyin {
                         .collect::<String>();
 
                     // find the first match in fuzzy map
-                    sorted_keys
-                        .iter()
-                        .find_map(|key| {
-                            let replaced = word.replace(key.as_str(), &fuzzy_map[*key]);
-                            if replaced != word {
-                                Some(replaced)
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap_or_else(|| word.to_string())
+                    return self
+                        .apply_fuzzy_map_to_input(&word)
+                        .unwrap_or_else(|_| word.to_string());
                 })
                 .collect();
 
@@ -115,19 +107,19 @@ impl Pinyin {
             }
 
             let mut sorted_keys: Vec<_> = fuzzy_map.keys().collect();
-            sorted_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
+            sorted_keys.sort_by(|a, b| b.len().cmp(&a.len()));
 
             let mut result = String::new();
             let mut i = 0;
-            while i < input.chars().count() {
-                let remaining_pinyin = &input.chars().skip(i).collect::<String>();
+            while i < input.len() {
+                let remaining_pinyin = &input[i..];
                 let mut found_match = false;
 
                 for key in &sorted_keys {
                     if remaining_pinyin.starts_with(key.as_str()) {
-                        if let Some(canonical) = fuzzy_map.get(*key) {
-                            result.push_str(canonical);
-                            i += key.chars().count();
+                        if let Some(uni_form) = fuzzy_map.get(*key) {
+                            result.push_str(uni_form);
+                            i += key.len();
                             found_match = true;
                             break;
                         }

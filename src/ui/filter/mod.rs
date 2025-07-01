@@ -98,7 +98,7 @@ impl Handler {
                         "title" => book_dat.title.to_string(),
                         "authors" => book_dat.authors.join(" & "),
                         "series" => book_dat.series.to_string(),
-                        "tags" => book_dat.tags.join(" , "),
+                        "tags" => book_dat.tags.join(", "),
                         _ => "".to_string(),
                     }
                 } else {
@@ -140,7 +140,7 @@ impl Handler {
                                     spans.push(Span::styled(
                                         text.chars()
                                             .skip(last_idx)
-                                            .take(end - last_idx)
+                                            .take(start - last_idx)
                                             .collect::<String>(),
                                         Style::default().fg(parse_color(fg_color_str)),
                                     ));
@@ -157,7 +157,9 @@ impl Handler {
                                         .skip(start)
                                         .take(end - start)
                                         .collect::<String>(),
-                                    Style::default().fg(highlighted_fg_color),
+                                    Style::default()
+                                        .fg(highlighted_fg_color)
+                                        .add_modifier(Modifier::BOLD),
                                 ));
 
                                 last_idx = end;

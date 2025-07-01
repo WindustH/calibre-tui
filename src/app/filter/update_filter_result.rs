@@ -9,7 +9,7 @@ impl<'a> super::super::Filter<'a> {
     pub(super) fn update_filtered_books_and_create_highlights(&mut self) -> Result<()> {
         if self.input.is_empty() {
             self.filtered_uuids = self.books_info.keys().cloned().collect();
-            self.books_highlights=BooksHighlights::new();
+            self.books_highlights = BooksHighlights::new();
             if !self.filtered_uuids.is_empty() {
                 self.table_state.select(Some(0));
             } else {
@@ -166,16 +166,21 @@ impl<'a> super::super::Filter<'a> {
         let mut match_results = Vec::new();
 
         for needle in query {
-            if let Some(match_start_char_idx) = full_str.find(needle) {
-                let match_end_char_idx = match_start_char_idx + needle.chars().count();
+            if let Some((match_start_byte_idx, matched_str)) = full_str.match_indices(needle).next()
+            {
+                // get char index not byte index
+                let start_char_idx = full_str[..match_start_byte_idx].chars().count();
+                let end_char_idx = start_char_idx + matched_str.chars().count();
 
-                // lookup the map
-                let start_token_idx = char_to_token_map[match_start_char_idx];
-                // index of the last char is match_end_char_idx - 1
-                let end_token_idx = char_to_token_map[match_end_char_idx - 1];
+                if end_char_idx > 0 && end_char_idx <= char_to_token_map.len() {
+                    let start_token_idx = char_to_token_map[start_char_idx];
+                    let end_token_idx = char_to_token_map[end_char_idx - 1];
 
-                // end index not inculded so +1
-                match_results.push((true, start_token_idx, end_token_idx + 1));
+                    // end index not inculded so +1
+                    match_results.push((true, start_token_idx, end_token_idx + 1));
+                } else {
+                    match_results.push((false, 0, 0));
+                }
             } else {
                 match_results.push((false, 0, 0));
             }
