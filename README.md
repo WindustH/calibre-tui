@@ -2,7 +2,11 @@
 
 A Terminal User Interface (TUI) for Calibre, allowing you to search and open books from your Calibre library directly from the terminal.
 
-[demo](demo.mkv)
+
+https://github.com/user-attachments/assets/61323a3a-fc4e-4e2e-92d4-0740a1f7e1f6
+
+
+
 ### Features
 
 * **Terminal User Interface**: Interact with your Calibre library in a fast and efficient terminal-based UI.
