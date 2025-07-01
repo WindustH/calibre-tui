@@ -45,11 +45,11 @@ impl<'a> super::super::Filter<'a> {
 
         // return err
         if !errors.is_empty() {
-            let aggregated_error = errors.into_iter().fold(
-                anyhow::anyhow!("errors occurred during book filtering"),
-                |acc, e| acc.context(e.to_string()),
-            );
-            return Err(aggregated_error);
+            let mut error_messages = String::from("errors occurred during book filtering:\n");
+            for e in errors {
+                error_messages.push_str(&format!("- {:?}\n", e));
+            }
+            return Err(anyhow::anyhow!(error_messages));
         }
 
         self.filtered_uuids = results.iter().map(|(uuid, _)| uuid.clone()).collect();
@@ -71,17 +71,21 @@ impl<'a> super::super::Filter<'a> {
         input: &str,
     ) -> Result<(bool, BookHighlights)> {
         for (name, version) in info {
-            let book_highlights = if let Some(translator) = self.i18n_handler.translators.get(name)
-            {
-                let input_i18n = if name == "default" {
-                    input.to_string()
-                } else {
-                    translator.trans_input(&input).context(format!(
-                        "failed to translate input for translator '{}'",
-                        name
-                    ))?
-                };
-
+            let input_i18n = if name == "default" {
+                Ok(input.to_string())
+            } else {
+                self.i18n_handler
+                    .translators
+                    .get(name)
+                    .ok_or_else(|| anyhow!("can't find translator named: {:?}", name))
+                    .and_then(|translator| {
+                        translator.trans_input(&input).context(format!(
+                            "failed to translate input for translator '{}'",
+                            name
+                        ))
+                    })
+            }?;
+            let book_highlights = {
                 let inputs = vec![input_i18n];
                 let (title_highlights, series_highlights, tags_highlights, authors_highlights) = (
                     self.for_tstring_find_matches_and_create_highlights(&version.title, &inputs)
@@ -112,10 +116,7 @@ impl<'a> super::super::Filter<'a> {
                     tags: tags_highlights,
                     authors: authors_highlights,
                 }
-            } else {
-                return Err(anyhow!("can't find translator named: {:?}", name));
             };
-
             let found_match = book_highlights.title.get(0).map_or(false, |&(b, _, _)| b)
                 || book_highlights.series.get(0).map_or(false, |&(b, _, _)| b)
                 || book_highlights.tags.get(0).map_or(false, |&(b, _, _)| b)
@@ -147,7 +148,7 @@ impl<'a> super::super::Filter<'a> {
         let char_to_token_map: Vec<usize> = str_index
             .windows(2)
             .enumerate()
-            .map(|(index, indices)| vec![index, indices[1] - indices[0]])
+            .map(|(index, indices)| vec![index; indices[1] - indices[0]])
             .flatten()
             .collect();
 
