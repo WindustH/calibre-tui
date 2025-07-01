@@ -3,23 +3,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use rusqlite::Connection;
 use std::collections::HashMap;
-use std::error::Error;
-use std::fmt;
 use std::path::PathBuf;
-
-#[derive(Debug)]
-pub enum DbError {
-    DbNotFound,
-}
-impl fmt::Display for DbError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            DbError::DbNotFound => write!(f, "Database not found."),
-        }
-    }
-}
-
-impl Error for DbError {}
 
 /// load book list from calibre metadata.db
 pub fn load_books_from_db(library_path: &PathBuf) -> Result<Books> {
@@ -90,9 +74,13 @@ pub fn load_books_from_db(library_path: &PathBuf) -> Result<Books> {
             .transpose()?
             .map(|dt| dt.with_timezone(&Utc));
         // get title with fallback ""
-        let title: String = row.get::<&str, Option<String>>("title")?.unwrap_or_default();
+        let title: String = row
+            .get::<&str, Option<String>>("title")?
+            .unwrap_or_default();
         // get relative_path with fallback ""
-        let relative_path: String = row.get::<&str, Option<String>>("relative_path")?.unwrap_or_default();
+        let relative_path: String = row
+            .get::<&str, Option<String>>("relative_path")?
+            .unwrap_or_default();
         // get full path
         let full_path = if relative_path.is_empty() {
             PathBuf::from("")
@@ -104,7 +92,9 @@ pub fn load_books_from_db(library_path: &PathBuf) -> Result<Books> {
         //     .get::<&str, String>("authors")
         //     .unwrap_or_else(|_| "Unknown Author".to_string());
         // get series with fallback ""
-        let series: String = row.get::<&str, Option<String>>("series")?.unwrap_or_default();
+        let series: String = row
+            .get::<&str, Option<String>>("series")?
+            .unwrap_or_default();
 
         // get tags (no more connected into a string) with fallback ""
         let tags: Vec<String> = row
@@ -141,6 +131,5 @@ pub fn load_books_from_db(library_path: &PathBuf) -> Result<Books> {
     // collect as hashmap
     let book_map: HashMap<String, Book> = book_iter.collect::<Result<_, _>>()?;
 
-    // wrap in Books struct
-    Ok(Books(book_map))
+    Ok(book_map)
 }

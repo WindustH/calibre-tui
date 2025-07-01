@@ -4,21 +4,21 @@ use anyhow::Result;
 
 mod pinyin;
 
-pub type Translation=(String, Vec<usize>);
+// translated string with token indices
+pub type TString=(String, Vec<usize>);
 // inermediate layer between two languages
 pub trait IR: Send + Sync + 'static {
-    // fn translate_metadata(&self, metadata: &Metadata) -> Result<Metadata>;
-    fn trans_book_info(&self, s: &str) -> Result<Translation>;
-    // no need for clone anymore
+    // translate book's info
+    fn trans_book_info(&self, s: &str) -> Result<TString>;
 
     // translate input string
     fn trans_input(&self, s:&str)->Result<String>;
-    // fn box_clone(&self) -> Box<dyn IR>;
+    // is this translator enabled?
     fn is_enabled(&self) -> bool;
 }
 
 
-
+// i18n handler
 pub struct Handler {
     pub translators: HashMap<String, Box<dyn IR>>,
 }
@@ -51,19 +51,3 @@ impl Handler {
         }
     }
 }
-
-// no need for clone anymore
-
-// impl Clone for I18nHandler {
-//     fn clone(&self) -> Self {
-//         let mut cloned_translators = HashMap::new();
-//         for (key, translator_box) in self.translators.iter() {
-//             let cloned_key = key.clone();
-//             let cloned_box = translator_box.box_clone();
-//             cloned_translators.insert(cloned_key, cloned_box);
-//         }
-//         I18nHandler {
-//             translators: cloned_translators,
-//         }
-//     }
-// }

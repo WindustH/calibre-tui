@@ -1,0 +1,184 @@
+use super::BookHighlights;
+use crate::app::filter::{Highlights, Info};
+use crate::i18n::filter::TString;
+use anyhow::{Context, Result, anyhow};
+
+impl<'a> super::super::Filter<'a> {
+    // to update the list of filtered books
+    // and create highlights
+    pub(super) fn update_filtered_books_and_create_highlights(&mut self) -> Result<()> {
+        if self.input.is_empty() {
+            self.filtered_uuids = self.books_info.keys().cloned().collect();
+            if !self.filtered_uuids.is_empty() {
+                self.table_state.select(Some(0));
+            } else {
+                self.table_state.select(None);
+            }
+            return Ok(());
+        }
+
+        let input_lower_case = self.input.to_lowercase();
+        let mut errors: Vec<anyhow::Error> = Vec::new();
+
+        // get iterator of result
+        let results: Vec<(String, BookHighlights)> = self
+            .books_info
+            .iter()
+            .filter_map(|(uuid, info)| {
+                match self.for_book_find_matches_and_create_highlights(info, &input_lower_case) {
+                    Ok((found_match, book_highlights)) => {
+                        if found_match {
+                            Some(Ok((uuid.clone(), book_highlights)))
+                        } else {
+                            None // no match
+                        }
+                    }
+                    Err(e) => {
+                        // collect error
+                        errors.push(e.context(format!("fail to process book uuid: {}", uuid)));
+                        Some(Err(())) // return a mark (will be filterd later)
+                    }
+                }
+            })
+            .filter_map(Result::ok) // only take ok result
+            .collect();
+
+        // return err
+        if !errors.is_empty() {
+            let aggregated_error = errors.into_iter().fold(
+                anyhow::anyhow!("errors occurred during book filtering"),
+                |acc, e| acc.context(e.to_string()),
+            );
+            return Err(aggregated_error);
+        }
+
+        self.filtered_uuids = results.iter().map(|(uuid, _)| uuid.clone()).collect();
+        self.books_highlights = results.into_iter().collect();
+
+        if !self.filtered_uuids.is_empty() {
+            self.table_state.select(Some(0));
+        } else {
+            self.table_state.select(None);
+        }
+
+        Ok(())
+    }
+
+    // for a book
+    fn for_book_find_matches_and_create_highlights(
+        &self,
+        info: &Info,
+        input: &str,
+    ) -> Result<(bool, BookHighlights)> {
+        for (name, version) in info {
+            let book_highlights = if let Some(translator) = self.i18n_handler.translators.get(name)
+            {
+                let input_i18n = if name == "default" {
+                    input.to_string()
+                } else {
+                    translator.trans_input(&input).context(format!(
+                        "failed to translate input for translator '{}'",
+                        name
+                    ))?
+                };
+
+                let inputs = vec![input_i18n];
+                let (title_highlights, series_highlights, tags_highlights, authors_highlights) = (
+                    self.for_tstring_find_matches_and_create_highlights(&version.title, &inputs)
+                        .context(format!(
+                            "failed to create highlights for title of book version '{:?}'",
+                            version.title
+                        ))?,
+                    self.for_tstring_find_matches_and_create_highlights(&version.series, &inputs)
+                        .context(format!(
+                            "failed to create highlights for series of book version '{:?}'",
+                            version.series
+                        ))?,
+                    self.for_tstring_find_matches_and_create_highlights(&version.tags, &inputs)
+                        .context(format!(
+                            "failed to create highlights for tags of book version '{:?}'",
+                            version.tags
+                        ))?,
+                    self.for_tstring_find_matches_and_create_highlights(&version.authors, &inputs)
+                        .context(format!(
+                            "Failed to create highlights for authors of book version '{:?}'",
+                            version.authors
+                        ))?,
+                );
+
+                BookHighlights {
+                    title: title_highlights,
+                    series: series_highlights,
+                    tags: tags_highlights,
+                    authors: authors_highlights,
+                }
+            } else {
+                return Err(anyhow!("can't find translator named: {:?}", name));
+            };
+
+            let found_match = book_highlights.title.get(0).map_or(false, |&(b, _, _)| b)
+                || book_highlights.series.get(0).map_or(false, |&(b, _, _)| b)
+                || book_highlights.tags.get(0).map_or(false, |&(b, _, _)| b)
+                || book_highlights.authors.get(0).map_or(false, |&(b, _, _)| b);
+            if found_match {
+                return Ok((true, book_highlights));
+            }
+        }
+        Ok((
+            false,
+            BookHighlights {
+                title: vec![(false, 0, 0)],
+                tags: vec![(false, 0, 0)],
+                series: vec![(false, 0, 0)],
+                authors: vec![(false, 0, 0)],
+            },
+        ))
+    }
+
+    /// find matches and create highlights for a TString
+    /// why set query as vec of string?
+    /// leaving space for future extension
+    fn for_tstring_find_matches_and_create_highlights(
+        &self,
+        translation: &TString,
+        query: &Vec<String>,
+    ) -> Result<Highlights> {
+        let (full_str, str_index) = translation;
+        let char_to_token_map: Vec<usize> = str_index
+            .windows(2)
+            .enumerate()
+            .map(|(index, indices)| vec![index, indices[1] - indices[0]])
+            .flatten()
+            .collect();
+
+        // make sure create a correct map (at least have the same length, right?)
+        if full_str.len() != char_to_token_map.len() {
+            return Err(anyhow!(
+                "the length of the full_str ({}) and the char_to_token_map ({}) must be equal. this indicates an internal data inconsistency.",
+                full_str.len(),
+                char_to_token_map.len()
+            ));
+        }
+
+        // result of this match
+        let mut match_results = Vec::new();
+
+        for needle in query {
+            if let Some(match_start_char_idx) = full_str.find(needle) {
+                let match_end_char_idx = match_start_char_idx + needle.len();
+
+                // lookup the map
+                let start_token_idx = char_to_token_map[match_start_char_idx];
+                // index of the last char is match_end_char_idx - 1
+                let end_token_idx = char_to_token_map[match_end_char_idx - 1];
+
+                // end index not inculded so +1
+                match_results.push((true, start_token_idx, end_token_idx + 1));
+            } else {
+                match_results.push((false, 0, 0));
+            }
+        }
+
+        Ok(match_results)
+    }
+}

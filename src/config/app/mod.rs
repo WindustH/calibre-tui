@@ -1,21 +1,16 @@
+use anyhow::{Result, anyhow};
 use std::path::PathBuf;
-use anyhow::Result;
-use crate::utils::db::DbError;
-
 
 // default app config
 impl Default for super::App {
     fn default() -> Self {
-        match validate_library_path(&"".to_string()){
-            Ok(library_path)=>Self { library_path},
-            Err(e)=>panic!("Can't find a valid calibre library path! Error: {:?}",e)
-        }
-
+        let path = PathBuf::from("");
+        Self { library_path: path }
     }
 }
 
 /// check database in the library directory and convert str into pathbuf
-pub fn validate_library_path(config_path_str : &String) -> Result<PathBuf> {
+pub fn validate_library_path(config_path_str: &String) -> Result<PathBuf> {
     if !config_path_str.is_empty() {
         let path = PathBuf::from(config_path_str);
         if path.join("metadata.db").exists() {
@@ -41,6 +36,5 @@ pub fn validate_library_path(config_path_str : &String) -> Result<PathBuf> {
             return Ok(docs_path);
         }
     }
-
-    Err(DbError::DbNotFound.into())
+    Err(anyhow!("database not found"))
 }

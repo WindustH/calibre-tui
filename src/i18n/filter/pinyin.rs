@@ -1,33 +1,8 @@
 // use crate::utils::book::Metadata;
-use super::{IR, Translation};
-use anyhow::Result;
+use super::{IR, TString};
+use anyhow::{Result,anyhow};
 use pinyin::ToPinyin;
 use std::collections::HashMap;
-use std::error::Error;
-use std::fmt;
-
-#[derive(Debug)]
-enum PinyinError {
-    Disabled,
-    FuzzyDisabled,
-    FuzzyMapError,
-    // FailedConvertMetadata,
-}
-
-impl fmt::Display for PinyinError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            PinyinError::Disabled => write!(f, "Pinyin functionality is disabled."),
-            PinyinError::FuzzyDisabled => write!(f, "Fuzzy Pinyin functionality is disabled."),
-            PinyinError::FuzzyMapError => write!(f, "Fuzzy Map is not correctly initialized."),
-            // PinyinError::FailedConvertMetadata => {
-            //     write!(f, "Failed to convert metadata to pinyin.")
-            // }
-        }
-    }
-}
-
-impl Error for PinyinError {}
 
 // no need for clone anymore
 // #[derive(Clone)]
@@ -68,12 +43,12 @@ impl Pinyin {
         }
         map
     }
-    fn apply_fuzzy_map_to_translation(&self, translation: &Translation) -> Result<Translation> {
+    fn apply_fuzzy_map_to_translation(&self, translation: &TString) -> Result<TString> {
         if !self.enabled {
-            return Err(PinyinError::Disabled.into());
+            return Err(anyhow!("pinyin is disabled"));
         }
         if !self.fuzzy_enabled {
-            return Err(PinyinError::FuzzyDisabled.into());
+            return Err(anyhow!("pinyin fuzzy map is disabled"));
         }
 
         if let Some(fuzzy_map) = self.fuzzy_map.as_ref() {
@@ -119,15 +94,15 @@ impl Pinyin {
 
             Ok((result_string, result_indices))
         } else {
-            Err(PinyinError::FuzzyMapError.into())
+            Err(anyhow!("fuzzy map is not correctly initialized"))
         }
     }
     fn apply_fuzzy_map_to_input(&self, pinyin: &str) -> Result<String> {
         if !self.enabled {
-            return Err(PinyinError::Disabled.into());
+            return Err(anyhow!("pinyin is disabled"));
         }
         if !self.fuzzy_enabled {
-            return Err(PinyinError::FuzzyDisabled.into());
+            return Err(anyhow!("pinyin fuzzy map is disabled"));
         }
         if let Some(fuzzy_map) = &self.fuzzy_map {
             if fuzzy_map.is_empty() {
@@ -162,13 +137,13 @@ impl Pinyin {
             }
             Ok(result)
         } else {
-            Err(PinyinError::FuzzyMapError.into())
+            Err(anyhow!("fuzzy map is not correctly initialized"))
         }
     }
 
-    pub fn get_translation(&self, s: &str) -> Result<Translation> {
+    pub fn get_translation(&self, s: &str) -> Result<TString> {
         if !self.enabled {
-            return Err(PinyinError::Disabled.into());
+            return Err(anyhow!("pinyin is disabled"));
         };
 
         let pinyin_parts: Vec<String> = s
@@ -197,39 +172,14 @@ impl Pinyin {
 }
 
 impl IR for Pinyin {
-    // fn translate_metadata(&self, metadata: &Metadata) -> Result<Metadata> {
-    //     match (
-    //         self.get_pinyin(&metadata.title),
-    //         self.get_pinyin(&metadata.authors),
-    //         self.get_pinyin(&metadata.series),
-    //         self.get_pinyin(&metadata.tags),
-    //     ) {
-    //         (Ok(title_pinyin), Ok(author_pinyin), Ok(series_pinyin), Ok(tags_pinyin)) => {
-    //             Ok(Metadata {
-    //                 title: title_pinyin,
-    //                 authors: author_pinyin,
-    //                 series: series_pinyin,
-    //                 tags: tags_pinyin,
-    //             })
-    //         }
-
-    //         (Err(e), _, _, _) => Err(e.into()),
-    //         (_, Err(e), _, _) => Err(e.into()),
-    //         (_, _, Err(e), _) => Err(e.into()),
-    //         (_, _, _, Err(e)) => Err(e.into()),
-    //     }
-    // }
-    fn trans_book_info(&self, s: &str) -> Result<Translation> {
+    fn trans_book_info(&self, s: &str) -> Result<TString> {
         self.get_translation(&s)
     }
 
     fn trans_input(&self, s: &str) -> Result<String> {
         self.apply_fuzzy_map_to_input(&s)
     }
-    // no need for clone anymore
-    // fn box_clone(&self) -> Box<dyn IR> {
-    //     Box::new(self.clone())
-    // }
+
     fn is_enabled(&self) -> bool {
         self.enabled
     }

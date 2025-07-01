@@ -1,21 +1,20 @@
-mod command;
-mod utils;
-mod i18n;
+mod app;
 mod config;
+mod i18n;
 mod ui;
+mod utils;
 
 use anyhow::Result;
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    Terminal,
-};
-use std::{io, time::Duration};
+use ratatui::{Terminal, backend::CrosstermBackend};
+use std::io;
+
+use crate::app::Ui;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -30,7 +29,7 @@ fn main() -> Result<()> {
 
     // setup
     let config = config::load_config()?;
-    let database=utils::db::load_books_from_db(&config.app.library_path)?;
+    let database = utils::db::load_books_from_db(&config.app.library_path)?;
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -39,8 +38,13 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // app
-    let mut app = command::filter::Filter::new(&database,&config.i18n.filter,args.exit_on_open)?;
-    let res = run_app(&mut terminal, &mut app);
+    let mut app = app::Filter::new(
+        &database,
+        &config.i18n.filter,
+        &config.ui.filter,
+        args.exit_on_open,
+    )?;
+    let res = app.tick(&mut terminal);
 
     // cleanup
     disable_raw_mode()?;
@@ -52,9 +56,8 @@ fn main() -> Result<()> {
     terminal.show_cursor()?;
 
     if let Err(err) = res {
-        println!("Application error: {:?}", err)
+        println!("application error: {:?}", err)
     }
 
     Ok(())
 }
-

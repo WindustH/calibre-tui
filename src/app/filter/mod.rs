@@ -1,34 +1,18 @@
-use crate::i18n::filter::{Handler, Translation};
-use crate::utils::book::{Book, Books, Uuids};
+use crate::i18n::filter::TString;
+use crate::utils::book::{Books, Uuids};
 use anyhow::Result;
 use ratatui::widgets::TableState;
 use std::collections::HashMap;
-use std::error::Error;
-use std::fmt;
-
-mod filter_books;
-mod main_loop;
-
-#[derive(Debug)]
-pub enum FilterError {
-    MetadataError,
-}
-impl fmt::Display for FilterError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            FilterError::MetadataError => write!(f, "Metadata is not correctly initialized."),
-        }
-    }
-}
-impl Error for FilterError {}
+mod tick;
+mod update_filter_result;
 
 #[derive(Debug, Clone)]
 // a translated version of a book's info
-struct Version {
-    pub title: Translation,
-    pub authors: Translation,
-    pub series: Translation,
-    pub tags: Translation,
+pub struct Version {
+    pub title: TString,
+    pub authors: TString,
+    pub series: TString,
+    pub tags: TString,
 }
 
 // a book's info of all versions
@@ -38,9 +22,9 @@ pub type BooksInfo = HashMap<String, Info>;
 
 /// highlights of a string
 /// Vec<(usize, usize)> is the array of start and end index
-type Highlights = Option<Vec<(usize, usize)>>;
+type Highlights = Vec<(bool, usize, usize)>;
 // highlights of a book's info
-struct BookHighlights {
+pub struct BookHighlights {
     pub title: Highlights,
     pub authors: Highlights,
     pub series: Highlights,
@@ -50,15 +34,17 @@ struct BookHighlights {
 // the string is uuid
 pub type BooksHighlights = HashMap<String, BookHighlights>;
 
-impl super::Filter {
+impl<'a> super::Filter<'a> {
     // initialize filter command
     pub fn new(
-        database: &Books,
+        database: &'a Books,
         i18n_config: &crate::config::i18n::Filter,
+        ui_config: &crate::config::ui::Filter,
         exit_on_open: bool,
     ) -> Result<Self> {
         // create i18n handler
-        let i18n_handler = Handler::new(&i18n_config)?;
+        let i18n_handler = crate::i18n::filter::Handler::new(&i18n_config)?;
+        let ui_handler = crate::ui::filter::Handler::new(ui_config)?;
         // initialize table state
         let mut table_state = TableState::default();
         if !database.is_empty() {
@@ -66,7 +52,7 @@ impl super::Filter {
         }
 
         let mut filtered_uuids = Uuids::new();
-        let mut books_highlights = BooksHighlights::new();
+        let books_highlights = BooksHighlights::new();
         // build filter source
         let mut books_info = BooksInfo::new();
 
@@ -135,6 +121,8 @@ impl super::Filter {
             should_quit: false,
             exit_on_open,
             i18n_handler,
+            ui_handler,
+            database,
         })
     }
 
@@ -174,16 +162,6 @@ impl super::Filter {
         self.table_state.select(Some(i));
     }
 
-    // get the path(relative to library path) of the hovered book
-    // pub fn get_hovered_book_path(&self) -> Option<String> {
-    //     if let Some(hovered_index) = self.table_state.selected() {
-    //         if let Some(book) = self.filtered_books.get(hovered_index) {
-    //             return Some(book.path.clone());
-    //         }
-    //     };
-    //     None
-    // }
-
     // get the uuids of hovered book
     pub fn get_hovered(&self) -> Option<String> {
         if let Some(hovered_index) = self.table_state.selected() {
@@ -193,8 +171,17 @@ impl super::Filter {
         };
         None
     }
-    // get user's input in the inputbox
-    pub fn get_input(&self) -> &String {
-        &self.input
-    }
+    // // get user's input in the inputbox
+    // pub fn get_input(&self) -> &String {
+    //     &self.input
+    // }
+    // pub fn get_table_state(&self) -> Option<usize> {
+    //     self.table_state.selected()
+    // }
+    // pub fn get_filtered_uuids(&self) -> &Uuids {
+    //     &self.filtered_uuids
+    // }
+    // pub fn get_books_highlights(&self) -> &BooksHighlights {
+    //     &self.books_highlights
+    // }
 }
