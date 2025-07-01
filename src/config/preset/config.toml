@@ -1,0 +1,64 @@
+[app]
+library_path = ""
+# ---------------------
+[i18n.filter.pinyin]
+enabled = true
+fuzzy_enabled = true
+fuzzy_groups = [
+    ["ong", "on"],
+    ["an", "ang"],
+    ["en", "eng"],
+    ["in", "ing"]
+]
+# ---------------------
+[[ui.filter.table.columns]]
+label = "title"
+position = 0
+ratio = 40
+fg = "White"
+hovered_fg = "White"
+hovered_bg = "Blue"
+label_fg = "Blue"
+highlighted_fg = "Red"
+hovered_highlighted_fg="Yellow"
+# ---------------------
+[[ui.filter.table.columns]]
+label = "authors"
+position = 1
+ratio = 20
+fg = "Cyan"
+hovered_fg = "White"
+hovered_bg = "Blue"
+label_fg = "Blue"
+highlighted_fg= "Red"
+hovered_highlighted_fg="Yellow"
+# ---------------------
+[[ui.filter.table.columns]]
+label = "series"
+position = 2
+ratio = 20
+fg = "White"
+hovered_fg = "White"
+hovered_bg = "Blue"
+label_fg = "Blue"
+highlighted_fg= "Red"
+hovered_highlighted_fg="Yellow"
+# ---------------------
+[[ui.filter.table.columns]]
+label = "tags"
+position = 3
+ratio = 20
+fg = "Cyan"
+hovered_fg = "White"
+hovered_bg = "Blue"
+label_fg = "Blue"
+highlighted_fg= "Red"
+hovered_highlighted_fg="Yellow"
+# ---------------------
+
+[ui.filter]
+inputbox.border.fg = "Blue"
+table.border.fg = "Blue"
+inputbox.title.fg = "Blue"
+inputbox.fg = "White"
+table.title.fg = "Blue"
