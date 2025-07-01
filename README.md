@@ -15,11 +15,16 @@ https://github.com/user-attachments/assets/61323a3a-fc4e-4e2e-92d4-0740a1f7e1f6
 * **Customizable UI**: Configure the look and feel of the application, including colors and table layouts, to your liking.
 * **Open Books**: Open books directly from the TUI.
 
-### Installation
+### Install
+1.  **On Arch Linux**
+    ```bash
+    pacman -S calibre-tui
+    ```
+### Build
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/windusth/calibre-tui.git](https://github.com/windusth/calibre-tui.git)
+    git clone https://github.com/WindustH/calibre-tui.git
     cd calibre-tui
     ```
 2.  **Build the project:**
