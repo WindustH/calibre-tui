@@ -23,12 +23,12 @@ impl Handler {
     }
     pub fn draw(
         &self,
-        frame: &mut Frame, // frame to draw
-        input: &String, // input in filter inputbox
-        filtered_uuids: &Uuids, // uuids of filtered books
+        frame: &mut Frame,                  // frame to draw
+        input: &String,                     // input in filter inputbox
+        filtered_uuids: &Uuids,             // uuids of filtered books
         books_highlights: &BooksHighlights, // highlights
-        database: &Books, // books data
-        table_state: &mut TableState, // table state
+        database: &Books,                   // books data
+        table_state: &mut TableState,       // table state
     ) {
         // set the ui basic layout
         let chunks = Layout::default()
@@ -118,39 +118,57 @@ impl Handler {
                             _ => &vec![],
                         };
 
-                        if !highlights.is_empty() {
-                            let spans: Vec<Span> = highlights
-                                .iter()
-                                .map(|(is_match, start, end)| {
-                                    let content = text.get(*start..*end).unwrap_or("").to_owned();
-
-                                    // get the fg color
-                                    let fg_color = if *is_match {
-                                        if is_hovered {
-                                            parse_color(&col_config.hovered_highlighted_fg)
-                                        } else {
-                                            parse_color(&col_config.highlighted_fg)
-                                        }
-                                    } else {
-                                        parse_color(fg_color_str)
-                                    };
-
-                                    // styled span for this segement
-                                    Span::styled(content, Style::default().fg(fg_color))
-                                })
-                                .collect();
-
-                            // assemble the spans
-                            Line::from(spans)
-                        } else {
-                            // no highlight so render as normal line in this column
+                        // if highlights is empty, or only contains a "no match" marker
+                        // render the entire text with the default style
+                        if highlights.is_empty() || (highlights.len() == 1 && !highlights[0].0) {
                             Line::from(Span::styled(
                                 text,
                                 Style::default().fg(parse_color(fg_color_str)),
                             ))
+                        } else {
+                            // construct the line with highlighted and non-highlighted parts
+                            let mut spans = vec![];
+                            let mut last_idx = 0;
+
+                            // clone and sort highlights by their start position
+                            let mut sorted_highlights = highlights.to_vec();
+                            sorted_highlights.sort_unstable_by_key(|h| h.1);
+
+                            for &(_, start, end) in &sorted_highlights {
+                                // add the text before the current highlight, if any.
+                                if start > last_idx {
+                                    spans.push(Span::styled(
+                                        text.get(last_idx..start).unwrap_or("").to_owned(),
+                                        Style::default().fg(parse_color(fg_color_str)),
+                                    ));
+                                }
+
+                                // add the highlighted text.
+                                let highlighted_fg_color = if is_hovered {
+                                    parse_color(&col_config.hovered_highlighted_fg)
+                                } else {
+                                    parse_color(&col_config.highlighted_fg)
+                                };
+                                spans.push(Span::styled(
+                                    text.get(start..end).unwrap_or("").to_owned(),
+                                    Style::default().fg(highlighted_fg_color),
+                                ));
+
+                                last_idx = end;
+                            }
+
+                            // add the remaining text after the last highlight, if any.
+                            if last_idx < text.len() {
+                                spans.push(Span::styled(
+                                    text.get(last_idx..).unwrap_or("").to_owned(),
+                                    Style::default().fg(parse_color(fg_color_str)),
+                                ));
+                            }
+
+                            Line::from(spans)
                         }
                     } else {
-                        // no highlight so render as normal line
+                        // no highlight information, render text with default style
                         Line::from(Span::styled(
                             text,
                             Style::default().fg(parse_color(fg_color_str)),

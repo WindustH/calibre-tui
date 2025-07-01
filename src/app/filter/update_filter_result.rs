@@ -1,5 +1,5 @@
 use super::BookHighlights;
-use crate::app::filter::{Highlights, Info};
+use crate::app::filter::{BooksHighlights, Highlights, Info};
 use crate::i18n::filter::TString;
 use anyhow::{Context, Result, anyhow};
 
@@ -9,6 +9,7 @@ impl<'a> super::super::Filter<'a> {
     pub(super) fn update_filtered_books_and_create_highlights(&mut self) -> Result<()> {
         if self.input.is_empty() {
             self.filtered_uuids = self.books_info.keys().cloned().collect();
+            self.books_highlights=BooksHighlights::new();
             if !self.filtered_uuids.is_empty() {
                 self.table_state.select(Some(0));
             } else {
