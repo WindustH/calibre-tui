@@ -147,7 +147,30 @@ impl Pinyin {
             .chars()
             .map(|c| match c.to_pinyin() {
                 Some(pinyin) => pinyin.plain().to_string(),
-                None => c.to_string(),
+                None => match c {
+                    '，' => ",".to_string(),
+                    '《' => "<".to_string(),
+                    '》' => ">".to_string(),
+                    '：' => ":".to_string(),
+                    '；' => ";".to_string(),
+                    '—' => "-".to_string(),
+                    '“' => "\"".to_string(),
+                    '”' => "\"".to_string(),
+                    '‘' => "'".to_string(),
+                    '’' => "'".to_string(),
+                    '（' => "(".to_string(),
+                    '）' => ")".to_string(),
+                    '【' => "[".to_string(),
+                    '】' => "]".to_string(),
+                    '！' => "!".to_string(),
+                    '？' => "?".to_string(),
+                    '。' => ".".to_string(),
+                    '、' => ",".to_string(),
+                    '０'..='９' => ((c as u8 - '０' as u8) + b'0').to_string(),
+                    'Ａ'..='Ｚ' => ((c as u8 - 'Ａ' as u8) + b'A').to_string(),
+                    'ａ'..='ｚ' => ((c as u8 - 'ａ' as u8) + b'a').to_string(),
+                    _ => c.to_string(),
+                },
             })
             .collect();
 

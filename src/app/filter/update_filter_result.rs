@@ -18,7 +18,7 @@ impl<'a> super::super::Filter<'a> {
             return Ok(());
         }
 
-        let input_lower_case = self.input.to_lowercase();
+        let input_lower_case = self.input.to_lowercase().replace(" ", "");
         let mut errors: Vec<anyhow::Error> = Vec::new();
 
         // get iterator of result

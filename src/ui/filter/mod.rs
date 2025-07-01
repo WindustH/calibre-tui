@@ -128,47 +128,65 @@ impl Handler {
                         } else {
                             // construct the line with highlighted and non-highlighted parts
                             let mut spans = vec![];
-                            let mut last_idx = 0;
+                            let mut last_char_idx = 0; // tracks position in the original text (with spaces)
+                            let mut non_space_idx = 0; // tracks position in the text without spaces
 
                             // clone and sort highlights by their start position
                             let mut sorted_highlights = highlights.to_vec();
                             sorted_highlights.sort_unstable_by_key(|h| h.1);
 
-                            for &(_, start, end) in &sorted_highlights {
-                                // add the text before the current highlight, if any.
-                                if start > last_idx {
-                                    spans.push(Span::styled(
-                                        text.chars()
-                                            .skip(last_idx)
-                                            .take(start - last_idx)
-                                            .collect::<String>(),
-                                        Style::default().fg(parse_color(fg_color_str)),
-                                    ));
+                            let mut highlight_iter = sorted_highlights.iter().peekable();
+                            let mut current_highlight = highlight_iter.next();
+
+                            let mut current_span_text = String::new();
+
+                            for (char_idx, ch) in text.chars().enumerate() {
+                                let is_space = ch.is_whitespace();
+
+                                // check if the current character is the start of a highlight
+                                if let Some(&(_, start, _)) = current_highlight {
+                                    if non_space_idx == start {
+                                        // push the preceding non-highlighted text if it exists
+                                        if !current_span_text.is_empty() {
+                                            spans.push(Span::styled(
+                                                std::mem::take(&mut current_span_text),
+                                                Style::default().fg(parse_color(fg_color_str)),
+                                            ));
+                                        }
+                                    }
                                 }
 
-                                // add the highlighted text.
-                                let highlighted_fg_color = if is_hovered {
-                                    parse_color(&col_config.hovered_highlighted_fg)
-                                } else {
-                                    parse_color(&col_config.highlighted_fg)
-                                };
-                                spans.push(Span::styled(
-                                    text.chars()
-                                        .skip(start)
-                                        .take(end - start)
-                                        .collect::<String>(),
-                                    Style::default()
-                                        .fg(highlighted_fg_color)
-                                        .add_modifier(Modifier::BOLD),
-                                ));
+                                current_span_text.push(ch);
 
-                                last_idx = end;
+                                if !is_space {
+                                    non_space_idx += 1;
+                                }
+
+                                // check if the current character is the end of a highlight
+                                if let Some(&(_, _, end)) = current_highlight {
+                                    if non_space_idx == end {
+                                        // push the highlighted text
+                                        let highlighted_fg_color = if is_hovered {
+                                            parse_color(&col_config.hovered_highlighted_fg)
+                                        } else {
+                                            parse_color(&col_config.highlighted_fg)
+                                        };
+                                        spans.push(Span::styled(
+                                            std::mem::take(&mut current_span_text),
+                                            Style::default()
+                                                .fg(highlighted_fg_color)
+                                                .add_modifier(Modifier::BOLD),
+                                        ));
+                                        current_highlight = highlight_iter.next();
+                                    }
+                                }
+                                last_char_idx = char_idx + 1;
                             }
 
                             // add the remaining text after the last highlight, if any.
-                            if last_idx < text.chars().count() {
+                            if !current_span_text.is_empty() {
                                 spans.push(Span::styled(
-                                    text.chars().skip(last_idx).collect::<String>(),
+                                    current_span_text,
                                     Style::default().fg(parse_color(fg_color_str)),
                                 ));
                             }

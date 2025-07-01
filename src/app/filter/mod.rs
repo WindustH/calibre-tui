@@ -64,17 +64,17 @@ impl<'a> super::Filter<'a> {
             let tags_str = book.tags.join(", ");
 
             // generate default version
+            let process_str = |input: &str| {
+                let processed = input.to_lowercase().replace(" ", "");
+                let ranges: Vec<usize> = (0..=processed.chars().count()).collect();
+                (processed, ranges)
+            };
+
             let default_variant = Version {
-                title: (book.title.to_lowercase(), (0..=book.title.chars().count()).collect()),
-                series: (
-                    book.series.to_lowercase(),
-                    (0..=book.series.chars().count()).collect(),
-                ),
-                tags: (tags_str.to_lowercase(), (0..=tags_str.chars().count()).collect()),
-                authors: (
-                    authors_str.to_lowercase(),
-                    (0..=authors_str.chars().count()).collect(),
-                ),
+                title: process_str(&book.title),
+                series: process_str(&book.series),
+                tags: process_str(&tags_str),
+                authors: process_str(&authors_str),
             };
             versions.insert("default".to_string(), default_variant);
 
@@ -82,10 +82,10 @@ impl<'a> super::Filter<'a> {
             for (name, translator) in &i18n_handler.translators {
                 if translator.is_enabled() {
                     let translation_results = (
-                        translator.trans_book_info(&book.title),
-                        translator.trans_book_info(&book.series),
-                        translator.trans_book_info(&tags_str),
-                        translator.trans_book_info(&authors_str),
+                        translator.trans_book_info(&book.title.replace(" ", "").to_lowercase()),
+                        translator.trans_book_info(&book.series.replace(" ", "").to_lowercase()),
+                        translator.trans_book_info(&tags_str.replace(" ", "").to_lowercase()),
+                        translator.trans_book_info(&authors_str.replace(" ", "").to_lowercase()),
                     );
 
                     // deal with all cases
