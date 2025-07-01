@@ -41,12 +41,12 @@ pub struct Config {
 /// load and parse config file
 /// if config file or directory doesn't exist, use `Default` impl to create a config file
 pub fn load_config() -> Result<Config> {
-    let config_dir = dirs::config_dir().context("Could not get config directory")?;
+    let config_dir = dirs::config_dir().context("could not get config directory")?;
     let app_config_dir = config_dir.join("calibre-tui");
 
     if !app_config_dir.exists() {
         fs::create_dir_all(&app_config_dir).with_context(|| {
-            format!("Failed to create config directory at {:?}", app_config_dir)
+            format!("failed to create config directory at {:?}", app_config_dir)
         })?;
     }
 
