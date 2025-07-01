@@ -154,10 +154,10 @@ impl<'a> super::super::Filter<'a> {
             .collect();
 
         // make sure create a correct map (at least have the same length, right?)
-        if full_str.len() != char_to_token_map.len() {
+        if full_str.chars().count() != char_to_token_map.len() {
             return Err(anyhow!(
                 "the length of the full_str ({}) and the char_to_token_map ({}) must be equal. this indicates an internal data inconsistency.",
-                full_str.len(),
+                full_str.chars().count(),
                 char_to_token_map.len()
             ));
         }
@@ -167,7 +167,7 @@ impl<'a> super::super::Filter<'a> {
 
         for needle in query {
             if let Some(match_start_char_idx) = full_str.find(needle) {
-                let match_end_char_idx = match_start_char_idx + needle.len();
+                let match_end_char_idx = match_start_char_idx + needle.chars().count();
 
                 // lookup the map
                 let start_token_idx = char_to_token_map[match_start_char_idx];

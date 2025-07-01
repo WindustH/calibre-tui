@@ -65,15 +65,15 @@ impl<'a> super::Filter<'a> {
 
             // generate default version
             let default_variant = Version {
-                title: (book.title.to_lowercase(), (0..=book.title.len()).collect()),
+                title: (book.title.to_lowercase(), (0..=book.title.chars().count()).collect()),
                 series: (
                     book.series.to_lowercase(),
-                    (0..=book.series.len()).collect(),
+                    (0..=book.series.chars().count()).collect(),
                 ),
-                tags: (tags_str.to_lowercase(), (0..=tags_str.len()).collect()),
+                tags: (tags_str.to_lowercase(), (0..=tags_str.chars().count()).collect()),
                 authors: (
                     authors_str.to_lowercase(),
-                    (0..=authors_str.len()).collect(),
+                    (0..=authors_str.chars().count()).collect(),
                 ),
             };
             versions.insert("default".to_string(), default_variant);

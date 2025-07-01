@@ -138,7 +138,10 @@ impl Handler {
                                 // add the text before the current highlight, if any.
                                 if start > last_idx {
                                     spans.push(Span::styled(
-                                        text.get(last_idx..start).unwrap_or("").to_owned(),
+                                        text.chars()
+                                            .skip(last_idx)
+                                            .take(end - last_idx)
+                                            .collect::<String>(),
                                         Style::default().fg(parse_color(fg_color_str)),
                                     ));
                                 }
@@ -150,7 +153,10 @@ impl Handler {
                                     parse_color(&col_config.highlighted_fg)
                                 };
                                 spans.push(Span::styled(
-                                    text.get(start..end).unwrap_or("").to_owned(),
+                                    text.chars()
+                                        .skip(start)
+                                        .take(end - start)
+                                        .collect::<String>(),
                                     Style::default().fg(highlighted_fg_color),
                                 ));
 
@@ -158,9 +164,9 @@ impl Handler {
                             }
 
                             // add the remaining text after the last highlight, if any.
-                            if last_idx < text.len() {
+                            if last_idx < text.chars().count() {
                                 spans.push(Span::styled(
-                                    text.get(last_idx..).unwrap_or("").to_owned(),
+                                    text.chars().skip(last_idx).collect::<String>(),
                                     Style::default().fg(parse_color(fg_color_str)),
                                 ));
                             }

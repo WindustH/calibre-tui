@@ -1,6 +1,6 @@
 // use crate::utils::book::Metadata;
 use super::{IR, TString};
-use anyhow::{Result,anyhow};
+use anyhow::{Result, anyhow};
 use pinyin::ToPinyin;
 use std::collections::HashMap;
 
@@ -66,7 +66,12 @@ impl Pinyin {
                 .1
                 .windows(2) // iterate through the nearby pairs of index
                 .map(|indices| {
-                    let word = &translation.0[indices[0]..indices[1]];
+                    let word = translation
+                        .0
+                        .chars()
+                        .skip(indices[0])
+                        .take(indices[1] - indices[0])
+                        .collect::<String>();
 
                     // find the first match in fuzzy map
                     sorted_keys
@@ -89,7 +94,7 @@ impl Pinyin {
 
             for syllable in &new_syllables {
                 result_string.push_str(syllable);
-                result_indices.push(result_string.len());
+                result_indices.push(result_string.chars().count());
             }
 
             Ok((result_string, result_indices))
@@ -97,7 +102,7 @@ impl Pinyin {
             Err(anyhow!("fuzzy map is not correctly initialized"))
         }
     }
-    fn apply_fuzzy_map_to_input(&self, pinyin: &str) -> Result<String> {
+    fn apply_fuzzy_map_to_input(&self, input: &str) -> Result<String> {
         if !self.enabled {
             return Err(anyhow!("pinyin is disabled"));
         }
@@ -106,23 +111,23 @@ impl Pinyin {
         }
         if let Some(fuzzy_map) = &self.fuzzy_map {
             if fuzzy_map.is_empty() {
-                return Ok(pinyin.to_string());
+                return Ok(input.to_string());
             }
 
             let mut sorted_keys: Vec<_> = fuzzy_map.keys().collect();
-            sorted_keys.sort_by(|a, b| b.len().cmp(&a.len()));
+            sorted_keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
 
             let mut result = String::new();
             let mut i = 0;
-            while i < pinyin.len() {
-                let remaining_pinyin = &pinyin[i..];
+            while i < input.chars().count() {
+                let remaining_pinyin = &input.chars().skip(i).collect::<String>();
                 let mut found_match = false;
 
                 for key in &sorted_keys {
                     if remaining_pinyin.starts_with(key.as_str()) {
                         if let Some(canonical) = fuzzy_map.get(*key) {
                             result.push_str(canonical);
-                            i += key.len();
+                            i += key.chars().count();
                             found_match = true;
                             break;
                         }
@@ -159,7 +164,7 @@ impl Pinyin {
 
         for part in &pinyin_parts {
             combined_string.push_str(part);
-            indices.push(combined_string.len());
+            indices.push(combined_string.chars().count());
         }
 
         let original_translation = (combined_string, indices);
@@ -177,7 +182,11 @@ impl IR for Pinyin {
     }
 
     fn trans_input(&self, s: &str) -> Result<String> {
-        self.apply_fuzzy_map_to_input(&s)
+        if self.fuzzy_enabled {
+            self.apply_fuzzy_map_to_input(&s)
+        } else {
+            Ok(s.to_string())
+        }
     }
 
     fn is_enabled(&self) -> bool {
