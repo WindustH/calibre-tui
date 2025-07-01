@@ -5,7 +5,7 @@ library_path = ""
 enabled = true
 fuzzy_enabled = true
 fuzzy_groups = [
-    ["ong", "on"],
+    ["ong", "on", "nog"],
     ["an", "ang"],
     ["en", "eng"],
     ["in", "ing"]
@@ -16,7 +16,7 @@ label = "title"
 position = 0
 ratio = 40
 fg = "White"
-hovered_fg = "White"
+hovered_fg = "Black"
 hovered_bg = "Blue"
 label_fg = "Blue"
 highlighted_fg = "Red"
@@ -27,7 +27,7 @@ label = "authors"
 position = 1
 ratio = 20
 fg = "Cyan"
-hovered_fg = "White"
+hovered_fg = "Black"
 hovered_bg = "Blue"
 label_fg = "Blue"
 highlighted_fg= "Red"
@@ -38,7 +38,7 @@ label = "series"
 position = 2
 ratio = 20
 fg = "White"
-hovered_fg = "White"
+hovered_fg = "Black"
 hovered_bg = "Blue"
 label_fg = "Blue"
 highlighted_fg= "Red"
@@ -49,7 +49,7 @@ label = "tags"
 position = 3
 ratio = 20
 fg = "Cyan"
-hovered_fg = "White"
+hovered_fg = "Black"
 hovered_bg = "Blue"
 label_fg = "Blue"
 highlighted_fg= "Red"
