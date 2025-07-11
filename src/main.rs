@@ -1,8 +1,9 @@
-mod app;
+mod widget;
 mod config;
 mod i18n;
 mod ui;
 mod utils;
+mod pipeline;
 
 use anyhow::Result;
 use clap::Parser;
@@ -14,7 +15,7 @@ use crossterm::{
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 
-use crate::app::Ui;
+use crate::widget::Ui;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -38,13 +39,17 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // app
-    let mut app = app::Filter::new(
+
+    let app = widget::Filter::new(
         &database,
         &config.i18n.filter,
         &config.ui.filter,
         args.exit_on_open,
     )?;
-    let res = app.tick(&mut terminal);
+    let res: Result<()> = loop {
+        app.draw_tick(&mut terminal)?;
+
+    };
 
     // cleanup
     disable_raw_mode()?;
@@ -55,9 +60,9 @@ fn main() -> Result<()> {
     )?;
     terminal.show_cursor()?;
 
-    if let Err(err) = res {
-        println!("application error: {:?}", err)
-    }
+    // if let Err(err) = res {
+    //     println!("application error: {:?}", err)
+    // }
 
     Ok(())
 }

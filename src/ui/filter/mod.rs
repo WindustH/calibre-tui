@@ -1,4 +1,4 @@
-use crate::app::filter::BooksHighlights;
+use crate::widget::filter::BooksHighlights;
 use crate::utils::book::{Books, Uuids};
 use crate::utils::color::parse_color;
 use anyhow::Result;
@@ -24,7 +24,7 @@ impl Handler {
     pub fn draw(
         &self,
         frame: &mut Frame,                  // frame to draw
-        input: &String,                     // input in filter inputbox
+        input: &str,                     // input in filter inputbox
         filtered_uuids: &Uuids,             // uuids of filtered books
         books_highlights: &BooksHighlights, // highlights
         database: &Books,                   // books data
@@ -41,7 +41,7 @@ impl Handler {
             .split(frame.size());
 
         // draw inputbox
-        let input_paragraph = Paragraph::new(input.as_str())
+        let input_paragraph = Paragraph::new(input)
             // set inputbox style
             .style(Style::default().fg(parse_color(&self.config.inputbox.fg)))
             // set border and title
@@ -128,7 +128,6 @@ impl Handler {
                         } else {
                             // construct the line with highlighted and non-highlighted parts
                             let mut spans = vec![];
-                            let mut last_char_idx = 0; // tracks position in the original text (with spaces)
                             let mut non_space_idx = 0; // tracks position in the text without spaces
 
                             // clone and sort highlights by their start position
@@ -140,7 +139,7 @@ impl Handler {
 
                             let mut current_span_text = String::new();
 
-                            for (char_idx, ch) in text.chars().enumerate() {
+                            for (_char_idx, ch) in text.chars().enumerate() {
                                 let is_space = ch.is_whitespace();
 
                                 // check if the current character is the start of a highlight
@@ -180,7 +179,6 @@ impl Handler {
                                         current_highlight = highlight_iter.next();
                                     }
                                 }
-                                last_char_idx = char_idx + 1;
                             }
 
                             // add the remaining text after the last highlight, if any.

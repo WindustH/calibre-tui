@@ -16,7 +16,7 @@ pub struct Column {
     pub label_fg: String,
 
     pub ratio: u16,
-    pub position: i32,
+    pub position: u16,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
