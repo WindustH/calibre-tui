@@ -1,14 +1,18 @@
 use crate::i18n::filter::TString;
 use crate::utils::book::{Books, Uuids};
+use crate::widget::{ControlCode, Filter};
 use anyhow::Result;
 use ratatui::widgets::TableState;
+use std::cell::RefCell;
 use std::collections::HashMap;
-mod tick;
-mod update_filter_result;
+mod ui;
+mod widget;
+mod update;
 
 #[derive(Debug, Clone)]
 // a translated version of a book's info
-pub struct Version {
+// to pass through filter
+pub(super) struct Version {
     pub title: TString,
     pub authors: TString,
     pub series: TString,
@@ -18,7 +22,7 @@ pub struct Version {
 // a book's info of all versions
 type Info = HashMap<String, Version>;
 // all books's info of all versions
-pub type BooksInfo = HashMap<String, Info>;
+pub(super) type BooksInfo = HashMap<String, Info>;
 
 /// highlights of a string
 /// Vec<(usize, usize)> is the array of start and end index
@@ -34,10 +38,10 @@ pub struct BookHighlights {
 // the string is uuid
 pub type BooksHighlights = HashMap<String, BookHighlights>;
 
-impl<'a> super::Filter<'a> {
+impl Filter {
     // initialize filter command
     pub fn new(
-        database: &'a Books,
+        database: &Books,
         i18n_config: &crate::config::i18n::Filter,
         ui_config: &crate::config::ui::Filter,
         exit_on_open: bool,
@@ -113,63 +117,87 @@ impl<'a> super::Filter<'a> {
             filtered_uuids.push(uuid.to_string());
         }
         Ok(Self {
-            books_highlights,
+            books_highlights: RefCell::new(books_highlights),
             books_info,
-            filtered_uuids,
-            table_state,
-            input: String::new(),
-            should_quit: false,
+            filtered_uuids: RefCell::new(filtered_uuids),
+            table_state: RefCell::new(table_state),
+            input: RefCell::new(String::new()),
             exit_on_open,
             i18n_handler,
             ui_handler,
-            database,
+            books: database.clone(),
+            selected_uuid_senders: HashMap::new(),
+            hovered_uuid_senders: HashMap::new(),
+            control_signal_sender: HashMap::new(),
+            // status_code_senders: HashMap::new(),
         })
     }
 
     // nagivate up
-    fn previous_item(&mut self) {
-        let i = match self.table_state.selected() {
+    fn previous_item(&self) {
+        let i = match self.table_state.borrow().selected() {
             Some(i) => {
-                if self.filtered_uuids.is_empty() {
+                if self.filtered_uuids.borrow().is_empty() {
                     0
                 } else if i == 0 {
-                    self.filtered_uuids.len() - 1
+                    self.filtered_uuids.borrow().len() - 1
                 } else {
                     i - 1
                 }
             }
-            None if !self.filtered_uuids.is_empty() => 0,
+            None if !self.filtered_uuids.borrow().is_empty() => 0,
             _ => 0,
         };
-        self.table_state.select(Some(i));
+        self.table_state.borrow_mut().select(Some(i));
     }
 
     // nagivate down
-    fn next_item(&mut self) {
-        let i = match self.table_state.selected() {
+    fn next_item(&self) {
+        let i = match self.table_state.borrow().selected() {
             Some(i) => {
-                if self.filtered_uuids.is_empty() {
+                if self.filtered_uuids.borrow().is_empty() {
                     0
-                } else if i >= self.filtered_uuids.len() - 1 {
+                } else if i >= self.filtered_uuids.borrow().len() - 1 {
                     0
                 } else {
                     i + 1
                 }
             }
-            None if !self.filtered_uuids.is_empty() => 0,
+            None if !self.filtered_uuids.borrow().is_empty() => 0,
             _ => 0,
         };
-        self.table_state.select(Some(i));
+        self.table_state.borrow_mut().select(Some(i));
     }
 
     // get the uuids of hovered book
-    pub fn get_hovered(&self) -> Option<String> {
-        if let Some(hovered_index) = self.table_state.selected() {
-            if let Some(uuid) = self.filtered_uuids.get(hovered_index) {
-                return Some(uuid.clone());
-            }
-        };
-        None
+    // pub fn get_hovered(&self) -> Option<String> {
+    //     if let Some(hovered_index) = self.table_state.selected() {
+    //         if let Some(uuid) = self.filtered_uuids.get(hovered_index) {
+    //             return Some(uuid.clone());
+    //         }
+    //     };
+    //     None
+    // }
+
+    pub fn send_selected_uuid(&self, uuid: String) -> Result<()> {
+        // send selected uuid to all senders
+        for sender in self.selected_uuid_senders.values() {
+            sender.send(uuid.clone())?;
+        }
+        Ok(())
+    }
+    pub fn send_hovered_uuid(&self, uuid: String) -> Result<()> {
+        // send hovered uuid to all senders
+        for sender in self.hovered_uuid_senders.values() {
+            sender.send(uuid.clone())?;
+        }
+        Ok(())
+    }
+    pub fn send_control_signal(&self, signal: ControlCode) -> Result<()> {
+        for sender in self.control_signal_sender.values() {
+            sender.send(signal.clone())?;
+        }
+        Ok(())
     }
     // // get user's input in the inputbox
     // pub fn get_input(&self) -> &String {

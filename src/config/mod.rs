@@ -3,17 +3,24 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 pub mod app;
-pub mod command;
+pub mod widget;
 pub mod i18n;
 pub mod ui;
+pub mod pipeline;
 
 pub mod validate;
 mod default;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Pipeline {
+    pub instances:Vec<pipeline::Instance>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(try_from = "validate::app::Raw")]
 pub struct App {
     pub library_path: PathBuf,
+    pub default_instance: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -36,6 +43,8 @@ pub struct Config {
     pub i18n: I18n,
     #[serde(default)]
     pub ui: Ui,
+    #[serde(default)]
+    pub pipeline: Pipeline
 }
 
 /// load and parse config file

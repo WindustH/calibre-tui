@@ -1,24 +1,24 @@
-use super::BookHighlights;
-use crate::app::filter::{BooksHighlights, Highlights, Info};
 use crate::i18n::filter::TString;
+use crate::widget::Filter;
+use crate::widget::filter::{BookHighlights, BooksHighlights, Highlights, Info};
 use anyhow::{Context, Result, anyhow};
 
-impl<'a> super::super::Filter<'a> {
+impl Filter {
     // to update the list of filtered books
     // and create highlights
-    pub(super) fn update_filtered_books_and_create_highlights(&mut self) -> Result<()> {
-        if self.input.is_empty() {
-            self.filtered_uuids = self.books_info.keys().cloned().collect();
-            self.books_highlights = BooksHighlights::new();
-            if !self.filtered_uuids.is_empty() {
-                self.table_state.select(Some(0));
+    pub(super) fn update(&self) -> Result<()> {
+        if self.input.borrow().is_empty() {
+            *self.filtered_uuids.borrow_mut() = self.books_info.keys().cloned().collect();
+            *self.books_highlights.borrow_mut() = BooksHighlights::new();
+            if !self.filtered_uuids.borrow().is_empty() {
+                self.table_state.borrow_mut().select(Some(0));
             } else {
-                self.table_state.select(None);
+                self.table_state.borrow_mut().select(None);
             }
             return Ok(());
         }
 
-        let input_lower_case = self.input.to_lowercase().replace(" ", "");
+        let input_lower_case = self.input.borrow().to_lowercase().replace(" ", "");
         let mut errors: Vec<anyhow::Error> = Vec::new();
 
         // get iterator of result
@@ -53,13 +53,13 @@ impl<'a> super::super::Filter<'a> {
             return Err(anyhow::anyhow!(error_messages));
         }
 
-        self.filtered_uuids = results.iter().map(|(uuid, _)| uuid.clone()).collect();
-        self.books_highlights = results.into_iter().collect();
+        *self.filtered_uuids.borrow_mut() = results.iter().map(|(uuid, _)| uuid.clone()).collect();
+        *self.books_highlights.borrow_mut() = results.into_iter().collect();
 
-        if !self.filtered_uuids.is_empty() {
-            self.table_state.select(Some(0));
+        if !self.filtered_uuids.borrow().is_empty() {
+            self.table_state.borrow_mut().select(Some(0));
         } else {
-            self.table_state.select(None);
+            self.table_state.borrow_mut().select(None);
         }
 
         Ok(())
