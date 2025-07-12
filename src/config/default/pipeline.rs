@@ -4,6 +4,7 @@ impl Default for Pipeline {
     fn default() -> Self {
         Self {
             instances: vec![Instance {
+                id: "filter-and-open".to_string(),
                 layout: Layout {
                     widget_id: Some("filter-0".to_string()),
                     up_down: None,

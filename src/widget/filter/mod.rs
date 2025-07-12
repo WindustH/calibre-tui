@@ -1,5 +1,6 @@
 use crate::i18n::filter::TString;
-use crate::utils::book::{Books, Uuids};
+use crate::utils::db::load_books_from_db;
+use crate::utils::book::Uuids;
 use crate::widget::{ControlCode, Filter};
 use anyhow::Result;
 use ratatui::widgets::TableState;
@@ -41,16 +42,15 @@ pub type BooksHighlights = HashMap<String, BookHighlights>;
 impl Filter {
     // initialize filter command
     pub fn new(
-        database: &Books,
-        i18n_config: &crate::config::i18n::Filter,
-        ui_config: &crate::config::ui::Filter,
+        config: &crate::config::Config,
         exit_on_open: bool,
     ) -> Result<Self> {
         // create i18n handler
-        let i18n_handler = crate::i18n::filter::Handler::new(&i18n_config)?;
-        let ui_handler = crate::ui::filter::Handler::new(ui_config)?;
+        let i18n_handler = crate::i18n::filter::Handler::new(&config.i18n.filter)?;
+        let ui_handler = crate::ui::filter::Handler::new(&config.ui.filter)?;
         // initialize table state
         let mut table_state = TableState::default();
+        let database=load_books_from_db(&config.app.library_path)?;
         if !database.is_empty() {
             table_state.select(Some(0));
         }
@@ -61,7 +61,7 @@ impl Filter {
         let mut books_info = BooksInfo::new();
 
         // iterate through books
-        for (uuid, book) in database {
+        for (uuid, book) in &database {
             let mut versions = Info::new();
             // prebuild tags and authors into string
             let authors_str = book.authors.join(" & ");
@@ -125,10 +125,10 @@ impl Filter {
             exit_on_open,
             i18n_handler,
             ui_handler,
-            books: database.clone(),
-            selected_uuid_senders: HashMap::new(),
-            hovered_uuid_senders: HashMap::new(),
-            control_signal_sender: HashMap::new(),
+            books: database,
+            selected_uuid_senders: RefCell::new(HashMap::new()),
+            hovered_uuid_senders:RefCell::new(HashMap::new()),
+            control_signal_sender: RefCell::new(HashMap::new()),
             // status_code_senders: HashMap::new(),
         })
     }
@@ -181,20 +181,20 @@ impl Filter {
 
     pub fn send_selected_uuid(&self, uuid: String) -> Result<()> {
         // send selected uuid to all senders
-        for sender in self.selected_uuid_senders.values() {
+        for sender in self.selected_uuid_senders.borrow().values() {
             sender.send(uuid.clone())?;
         }
         Ok(())
     }
     pub fn send_hovered_uuid(&self, uuid: String) -> Result<()> {
         // send hovered uuid to all senders
-        for sender in self.hovered_uuid_senders.values() {
+        for sender in self.hovered_uuid_senders.borrow().values() {
             sender.send(uuid.clone())?;
         }
         Ok(())
     }
     pub fn send_control_signal(&self, signal: ControlCode) -> Result<()> {
-        for sender in self.control_signal_sender.values() {
+        for sender in self.control_signal_sender.borrow().values() {
             sender.send(signal.clone())?;
         }
         Ok(())
