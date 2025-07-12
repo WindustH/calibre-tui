@@ -41,10 +41,8 @@ fn main() -> Result<()> {
     // app
 
     let app = widget::Filter::new(
-        &database,
-        &config.i18n.filter,
-        &config.ui.filter,
-        args.exit_on_open,
+        &config,
+        args.exit_on_open
     )?;
     let res: Result<()> = loop {
         app.draw_tick(&mut terminal)?;

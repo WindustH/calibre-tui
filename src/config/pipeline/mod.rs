@@ -22,7 +22,7 @@ pub struct Socket {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Layout {
-	pub ratio: Option<u16>,
+    pub ratio: Option<u16>,
     pub widget_id: Option<String>,
     pub left_right: Option<(Box<Layout>, Box<Layout>)>,
     pub up_down: Option<(Box<Layout>, Box<Layout>)>,
@@ -30,6 +30,7 @@ pub struct Layout {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Instance {
+    pub id: String,
     pub widgets: Vec<Widget>,
     pub channels: Vec<Channel>,
     pub layout: Layout,

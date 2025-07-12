@@ -12,11 +12,11 @@ enum Socket {
 }
 
 impl Widget for Filter {
-    fn tick(&mut self) -> Result<()> {
+    fn tick(&self) -> Result<()> {
         Ok(())
     }
     fn connect(
-        &mut self,
+        &self,
         channel_id: &str,
         socket_id: &str,
         plug: Box<dyn std::any::Any>,
@@ -25,11 +25,11 @@ impl Widget for Filter {
             Socket::SendSelectedUuid => {
                 if let Ok(sender) = plug.downcast::<std::sync::mpsc::Sender<String>>() {
                     // check if the channel_name already exists
-                    if self.selected_uuid_senders.contains_key(channel_id) {
+                    if self.selected_uuid_senders.borrow().contains_key(channel_id) {
                         Err(anyhow::anyhow!("channel {} already exists", channel_id))?;
                     } else {
                         // insert the sender into the selected_senders map
-                        self.selected_uuid_senders
+                        self.selected_uuid_senders.borrow_mut()
                             .insert(channel_id.to_string(), *sender);
                     }
                 } else {
@@ -39,11 +39,11 @@ impl Widget for Filter {
             Socket::SendHoverdUuid => {
                 if let Ok(sender) = plug.downcast::<std::sync::mpsc::Sender<String>>() {
                     // check if the channel_name already exists
-                    if self.hovered_uuid_senders.contains_key(channel_id) {
+                    if self.hovered_uuid_senders.borrow().contains_key(channel_id) {
                         Err(anyhow::anyhow!("channel {} already exists", channel_id))?;
                     } else {
                         // insert the sender into the hovered_senders map
-                        self.hovered_uuid_senders
+                        self.hovered_uuid_senders.borrow_mut()
                             .insert(channel_id.to_string(), *sender);
                     }
                 } else {

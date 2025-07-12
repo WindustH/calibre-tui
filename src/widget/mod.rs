@@ -18,10 +18,12 @@ pub mod open;
 pub enum ChannelDataType {
     #[strum(serialize = "uuid")]
     Uuid,
+    #[strum(serialize = "control-code")]
+    ControlCode,
 }
 
 #[derive(Debug, EnumString, Display, PartialEq)]
-enum WidgetClass {
+pub enum WidgetClass {
     #[strum(serialize = "filter")]
     Filter,
     #[strum(serialize = "open")]
@@ -43,8 +45,8 @@ pub trait Ui {
 /// other widgets and send output to other widgets
 /// in a tick loop
 pub trait Widget {
-    fn tick(&mut self) -> Result<()>;
-    fn connect(&mut self, channel_name: &str, socket_name: &str, plug: Box<dyn Any>) -> Result<()>;
+    fn tick(&self) -> Result<()>;
+    fn connect(&self, channel_name: &str, socket_name: &str, plug: Box<dyn Any>) -> Result<()>;
     fn get_socket_type(&self, socket_name: &str) -> Result<ChannelDataType>;
 }
 
@@ -66,19 +68,19 @@ pub struct Filter {
     // mark_signal_receivers: HashMap<String, mpsc::Receiver<String>>,
 
     // send selected book's uuid to other widgets
-    selected_uuid_senders: HashMap<String, mpsc::Sender<Uuid>>,
+    selected_uuid_senders: RefCell<HashMap<String, mpsc::Sender<Uuid>>>,
     // send hovered book's uuid to other widgets
     // when hovered book is changed
-    hovered_uuid_senders: HashMap<String, mpsc::Sender<Uuid>>,
+    hovered_uuid_senders: RefCell<HashMap<String, mpsc::Sender<Uuid>>>,
     // send control signal to pipeline manager
-    control_signal_sender: HashMap<String, mpsc::Sender<ControlCode>>,
+    control_signal_sender: RefCell<HashMap<String, mpsc::Sender<ControlCode>>>,
     // send status code to other widgets
     // status_code_senders: HashMap<String, mpsc::Sender<StatusCode>>,
 }
 
 pub struct Open {
     library_path: PathBuf,
-    receivers: HashMap<String, mpsc::Receiver<Uuid>>,
+    receivers: RefCell<HashMap<String, mpsc::Receiver<Uuid>>>,
     // send status code to other widgets
     // status_code_senders: HashMap<String, mpsc::Sender<StatusCode>>,
 }
