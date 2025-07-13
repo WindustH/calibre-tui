@@ -40,14 +40,6 @@ fn main() -> Result<()> {
 
     // app
 
-    let app = widget::Filter::new(
-        &config,
-        args.exit_on_open
-    )?;
-    let res: Result<()> = loop {
-        app.draw_tick(&mut terminal)?;
-
-    };
 
     // cleanup
     disable_raw_mode()?;

@@ -2,10 +2,13 @@ use crate::ui::filter::Handler as UiHandler;
 use crate::utils::book::{Uuid, Uuids};
 use crate::{i18n::filter::Handler as I18nHandler, utils::book::Books};
 use anyhow::Result;
+use ratatui::layout::Rect;
+use ratatui::prelude::CrosstermBackend;
 use ratatui::{Terminal, backend::Backend, widgets::TableState};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::io::Stdout;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use strum_macros::{Display, EnumString};
@@ -37,7 +40,7 @@ pub enum ControlCode {
 }
 
 pub trait Ui {
-    fn draw_tick<B: Backend>(&self, terminal: &mut Terminal<B>) -> Result<()>;
+    fn draw_tick(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>,rect: Rect) -> Result<()>;
     fn event_tick(&self) -> Result<()>;
 }
 
