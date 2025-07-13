@@ -1,15 +1,19 @@
 use crate::config::Pipeline;
-use crate::config::pipeline::{Channel, Instance, Layout, Socket, Widget};
+use crate::config::pipeline::{Area, Channel, Instance, Layout, Socket, Widget};
 impl Default for Pipeline {
     fn default() -> Self {
         Self {
             instances: vec![Instance {
                 id: "filter-and-open".to_string(),
                 layout: Layout {
-                    widget_id: Some("filter-0".to_string()),
-                    up_down: None,
-                    left_right: None,
-                    ratio: None,
+                    entry: "main".to_string(),
+                    areas: vec![Area {
+                        id: "main".to_string(),
+                        widget_id: Some("filter-0".to_string()),
+                        ratio: 100,
+                        direction: None,
+                        constraints: None,
+                    }],
                 },
                 widgets: vec![
                     Widget {

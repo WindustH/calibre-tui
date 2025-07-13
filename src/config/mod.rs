@@ -7,7 +7,6 @@ pub mod widget;
 pub mod i18n;
 pub mod ui;
 pub mod pipeline;
-
 pub mod validate;
 mod default;
 

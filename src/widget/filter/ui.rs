@@ -1,15 +1,20 @@
 use crate::widget::{ControlCode, Filter, Ui};
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
-use ratatui::{Terminal, backend::Backend};
-use std::time::Duration;
+use ratatui::{Terminal, layout::Rect, prelude::CrosstermBackend};
+use std::{io::Stdout, time::Duration};
 
 impl Ui for Filter {
     /// main loop
-    fn draw_tick<B: Backend>(&self, terminal: &mut Terminal<B>) -> Result<()> {
+    fn draw_tick(
+        &self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        rect: Rect,
+    ) -> Result<()> {
         terminal.draw(|f| {
             self.ui_handler.draw(
                 f,
+                rect,
                 &self.input.borrow(),
                 &self.filtered_uuids.borrow(),
                 &self.books_highlights.borrow(),
@@ -17,7 +22,6 @@ impl Ui for Filter {
                 &mut self.table_state.borrow_mut(),
             )
         })?;
-
         Ok(())
     }
     fn event_tick(&self) -> Result<()> {

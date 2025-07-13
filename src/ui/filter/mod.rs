@@ -1,7 +1,8 @@
-use crate::widget::filter::BooksHighlights;
 use crate::utils::book::{Books, Uuids};
 use crate::utils::color::parse_color;
+use crate::widget::filter::BooksHighlights;
 use anyhow::Result;
+use ratatui::layout::Rect;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
@@ -23,11 +24,12 @@ impl Handler {
     }
     pub fn draw(
         &self,
-        frame: &mut Frame,                  // frame to draw
-        input: &str,                     // input in filter inputbox
+        frame: &mut Frame, // frame to draw
+        rect: Rect,
+        input: &str,                        // input in filter inputbox
         filtered_uuids: &Uuids,             // uuids of filtered books
         books_highlights: &BooksHighlights, // highlights
-        database: &Books,                   // books data
+        books: &Books,                      // books data
         table_state: &mut TableState,       // table state
     ) {
         // set the ui basic layout
@@ -38,7 +40,7 @@ impl Handler {
             // set inputbox's height to 3, book table's takes the rest
             .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
             // get chunks layout
-            .split(frame.size());
+            .split(rect);
 
         // draw inputbox
         let input_paragraph = Paragraph::new(input)
@@ -93,7 +95,7 @@ impl Handler {
                     (&col_config.fg, &"Reset".to_string())
                 };
 
-                let text = if let Some(book_dat) = database.get(uuid) {
+                let text = if let Some(book_dat) = books.get(uuid) {
                     match col_config.label.as_str() {
                         "title" => book_dat.title.to_string(),
                         "authors" => book_dat.authors.join(" & "),
@@ -118,8 +120,8 @@ impl Handler {
                             _ => &vec![],
                         };
 
-                        // if highlights is empty, or only contains a "no match" marker
-                        // render the entire text with the default style
+                        // no highlights
+                        // render with the default style
                         if highlights.is_empty() || (highlights.len() == 1 && !highlights[0].0) {
                             Line::from(Span::styled(
                                 text,
@@ -128,7 +130,8 @@ impl Handler {
                         } else {
                             // construct the line with highlighted and non-highlighted parts
                             let mut spans = vec![];
-                            let mut non_space_idx = 0; // tracks position in the text without spaces
+                            // tracks position in the text without spaces
+                            let mut non_space_idx = 0;
 
                             // clone and sort highlights by their start position
                             let mut sorted_highlights = highlights.to_vec();
