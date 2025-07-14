@@ -28,7 +28,6 @@ fn main() -> Result<()> {
 
     // setup
     let config = config::load_config()?;
-    let database = utils::db::load_books_from_db(&config.app.library_path)?;
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -40,8 +39,9 @@ fn main() -> Result<()> {
     let mut pipeline = pipeline::Pipeline::new(&config, "filter-and-open");
     let loop_result = (|| -> Result<()> {
         loop {
-            pipeline.widget_tick(&mut terminal)?;
-            pipeline.event_tick()?;
+            let event = pipeline.event_tick()?;
+            pipeline.widget_tick(&mut terminal, &event)?;
+
             if pipeline.should_exit {
                 break;
             }

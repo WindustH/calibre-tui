@@ -5,9 +5,10 @@ use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 impl Pipeline {
-    pub fn event_tick(&mut self) -> Result<()> {
+    pub fn event_tick(&mut self) -> Result<Option<Event>> {
         if event::poll(Duration::from_millis(250))? {
-            match event::read()? {
+            let event = event::read()?;
+            match event {
                 Event::Key(key) => match key.code {
                     // ctrl c to quit the app
                     KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => {
@@ -17,11 +18,15 @@ impl Pipeline {
                     KeyCode::Esc => {
                         self.should_exit = true;
                     }
-                    _ => {}
+                    _ => {
+                        return Ok(Some(event));
+                    }
                 },
-                _ => {} // ignore
+                _ => {
+                    return Ok(Some(event));
+                }
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
