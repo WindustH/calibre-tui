@@ -1,4 +1,4 @@
-use crate::widget::{ChannelDataType, Filter, Widget};
+use crate::widget::{ChannelDataType, Filter, Ui, Widget};
 use anyhow::Result;
 use std::str::FromStr;
 use strum_macros::{Display, EnumString};
@@ -29,7 +29,8 @@ impl Widget for Filter {
                         Err(anyhow::anyhow!("channel {} already exists", channel_id))?;
                     } else {
                         // insert the sender into the selected_senders map
-                        self.selected_uuid_senders.borrow_mut()
+                        self.selected_uuid_senders
+                            .borrow_mut()
                             .insert(channel_id.to_string(), *sender);
                     }
                 } else {
@@ -43,7 +44,8 @@ impl Widget for Filter {
                         Err(anyhow::anyhow!("channel {} already exists", channel_id))?;
                     } else {
                         // insert the sender into the hovered_senders map
-                        self.hovered_uuid_senders.borrow_mut()
+                        self.hovered_uuid_senders
+                            .borrow_mut()
                             .insert(channel_id.to_string(), *sender);
                     }
                 } else {
@@ -58,5 +60,8 @@ impl Widget for Filter {
             Socket::SendHoverdUuid => Ok(ChannelDataType::Uuid),
             Socket::SendSelectedUuid => Ok(ChannelDataType::Uuid),
         }
+    }
+    fn as_ui(&self) -> Option<&dyn Ui> {
+        Some(self)
     }
 }

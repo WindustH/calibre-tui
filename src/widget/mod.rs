@@ -51,6 +51,7 @@ pub trait Widget {
     fn tick(&self) -> Result<()>;
     fn connect(&self, channel_name: &str, socket_name: &str, plug: Box<dyn Any>) -> Result<()>;
     fn get_socket_type(&self, socket_name: &str) -> Result<ChannelDataType>;
+    fn as_ui(&self) -> Option<&dyn Ui>;
 }
 
 pub struct Filter {

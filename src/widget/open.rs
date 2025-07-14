@@ -1,6 +1,6 @@
 use crate::utils::book::Uuid;
 use crate::utils::db::get_book_by_uuid_from_db;
-use crate::widget::{ChannelDataType, Open, Widget};
+use crate::widget::{ChannelDataType, Open, Ui, Widget};
 use anyhow::Result;
 use std::any::Any;
 use std::cell::RefCell;
@@ -71,5 +71,8 @@ impl Widget for Open {
         match Socket::from_str(socket_id)? {
             Socket::RecvUuidToOpen => Ok(ChannelDataType::Uuid),
         }
+    }
+    fn as_ui(&self) -> Option<&dyn Ui> {
+        None
     }
 }
