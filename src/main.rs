@@ -1,9 +1,9 @@
-mod widget;
 mod config;
 mod i18n;
+mod pipeline;
 mod ui;
 mod utils;
-mod pipeline;
+mod widget;
 
 use anyhow::Result;
 use clap::Parser;
@@ -14,8 +14,6 @@ use crossterm::{
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
-
-use crate::widget::Ui;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -38,8 +36,18 @@ fn main() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // app
-
+    // pipeline
+    let mut pipeline = pipeline::Pipeline::new(&config, "filter-and-open");
+    let loop_result = (|| -> Result<()> {
+        loop {
+            pipeline.widget_tick(&mut terminal)?;
+            pipeline.event_tick()?;
+            if pipeline.should_exit {
+                break;
+            }
+        }
+        Ok(())
+    })();
 
     // cleanup
     disable_raw_mode()?;
@@ -50,9 +58,9 @@ fn main() -> Result<()> {
     )?;
     terminal.show_cursor()?;
 
-    // if let Err(err) = res {
-    //     println!("application error: {:?}", err)
-    // }
+    if let Err(err) = loop_result {
+        println!("application error: {:?}", err)
+    }
 
     Ok(())
 }
