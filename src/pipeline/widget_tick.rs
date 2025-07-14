@@ -1,6 +1,7 @@
 use crate::config::pipeline::Area;
 use crate::pipeline::Pipeline;
 use anyhow::Result;
+use crossterm::event::Event;
 use ratatui::Terminal;
 use ratatui::layout::Layout;
 use ratatui::layout::Rect;
@@ -8,7 +9,11 @@ use ratatui::prelude::CrosstermBackend;
 use std::io::Stdout;
 
 impl Pipeline {
-    pub fn widget_tick(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    pub fn widget_tick(
+        &self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        event: &Option<Event>,
+    ) -> Result<()> {
         for widget in self.widgets.values() {
             // do tick for widget
             widget.tick()?;
@@ -106,7 +111,12 @@ impl Pipeline {
                         // do draw_tick
                         ui_widget.draw_tick(terminal, rect_stack.pop().unwrap())?;
                         // do event_tick
-                        ui_widget.event_tick()?;
+                        match event {
+                            Some(e) => {
+                                ui_widget.event_tick(e)?;
+                            }
+                            None => {}
+                        }
                     } else {
                         panic!("widget with id {} is not a Ui widget", widget_id);
                     }

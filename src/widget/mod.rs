@@ -2,9 +2,10 @@ use crate::ui::filter::Handler as UiHandler;
 use crate::utils::book::{Uuid, Uuids};
 use crate::{i18n::filter::Handler as I18nHandler, utils::book::Books};
 use anyhow::Result;
+use crossterm::event::Event;
 use ratatui::layout::Rect;
 use ratatui::prelude::CrosstermBackend;
-use ratatui::{Terminal, backend::Backend, widgets::TableState};
+use ratatui::{Terminal, widgets::TableState};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -40,8 +41,12 @@ pub enum ControlCode {
 }
 
 pub trait Ui {
-    fn draw_tick(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>,rect: Rect) -> Result<()>;
-    fn event_tick(&self) -> Result<()>;
+    fn draw_tick(
+        &self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        rect: Rect,
+    ) -> Result<()>;
+    fn event_tick(&self, event: &Event) -> Result<()>;
 }
 
 /// widget should be able to handle input from
