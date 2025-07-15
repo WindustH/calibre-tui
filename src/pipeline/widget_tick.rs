@@ -9,16 +9,8 @@ use ratatui::prelude::CrosstermBackend;
 use std::io::Stdout;
 
 impl Pipeline {
-    pub fn widget_tick(
-        &self,
-        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-        event: &Option<Event>,
-    ) -> Result<()> {
-        for widget in self.widgets.values() {
-            // do tick for widget
-            widget.tick()?;
-        }
-
+    // calculate the layout of the ui widgets based on the terminal size
+    pub fn update_ui_rects(&mut self, terminal_size: Rect) -> Result<()> {
         let entry_area = match self
             .config
             .layout
@@ -33,7 +25,7 @@ impl Pipeline {
         };
         // recursively iterate through areas in the layout
         let mut area_stack: Vec<Area> = vec![entry_area.clone()];
-        let mut rect_stack: Vec<Rect> = vec![terminal.size()?];
+        let mut rect_stack: Vec<Rect> = vec![terminal_size];
 
         while !area_stack.is_empty() {
             // handle the area on top of the stack
@@ -107,16 +99,9 @@ impl Pipeline {
                 if let Some(widget) = self.widgets.get(&widget_id) {
                     // draw the widget in the rect
                     // try to turn widget into Ui traits
-                    if let Some(ui_widget) = widget.as_ui() {
-                        // do draw_tick
-                        ui_widget.draw_tick(terminal, rect_stack.pop().unwrap())?;
-                        // do event_tick
-                        match event {
-                            Some(e) => {
-                                ui_widget.event_tick(e)?;
-                            }
-                            None => {}
-                        }
+                    if let Some(_) = widget.as_ui() {
+                        self.ui_rects
+                            .insert(widget_id.clone(), rect_stack.pop().unwrap());
                     } else {
                         panic!("widget with id {} is not a Ui widget", widget_id);
                     }
@@ -125,7 +110,33 @@ impl Pipeline {
                 }
             }
         }
+        Ok(())
+    }
+    pub fn widget_tick(
+        &self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        event: &Option<Event>,
+    ) -> Result<()> {
+        for widget in self.widgets.values() {
+            // do tick for widget
+            widget.tick()?;
+        }
 
+        // draw ui and handle events
+        for (widget_id, rect) in &self.ui_rects {
+            if let Some(widget) = self.widgets.get(widget_id) {
+                if let Some(ui) = widget.as_ui() {
+                    ui.draw_tick(terminal, *rect)?;
+                    if let Some(event) = event {
+                        ui.event_tick(event)?;
+                    }
+                } else {
+                    panic!("widget with id {} is not a Ui widget", widget_id);
+                }
+            } else {
+                panic!("widget with id {} not found", widget_id);
+            }
+        }
         Ok(())
     }
 }
