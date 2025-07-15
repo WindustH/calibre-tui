@@ -1,14 +1,17 @@
+use ratatui::layout::Rect;
+
 use crate::widget::{ChannelDataType, ControlCode, Filter, Open, Widget, WidgetClass};
 use std::str::FromStr;
 use std::{collections::HashMap, sync::mpsc};
 
-pub mod widget_tick;
 pub mod event_tick;
+pub mod widget_tick;
 
 pub struct Pipeline {
     widgets: HashMap<String, Box<dyn Widget>>,
     control_code_receivers: HashMap<String, mpsc::Receiver<ControlCode>>,
     config: crate::config::pipeline::Instance,
+    ui_rects: HashMap<String, Rect>,
     pub should_exit: bool,
 }
 
@@ -135,6 +138,7 @@ impl Pipeline {
             control_code_receivers: HashMap::<String, mpsc::Receiver<ControlCode>>::new(),
             config: instance_config.clone(),
             should_exit: false,
+            ui_rects: HashMap::new(),
         }
     }
 }
