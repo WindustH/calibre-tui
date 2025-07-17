@@ -7,10 +7,12 @@ use ratatui::layout::Layout;
 use ratatui::layout::Rect;
 use ratatui::prelude::CrosstermBackend;
 use std::io::Stdout;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 impl Pipeline {
     // calculate the layout of the ui widgets based on the terminal size
-    pub fn update_ui_rects(&mut self, terminal_size: Rect) -> Result<()> {
+    pub fn update_ui_rects(&self, terminal_size: Rect) -> Result<()> {
         let entry_area = match self
             .config
             .layout
@@ -101,6 +103,8 @@ impl Pipeline {
                     // try to turn widget into Ui traits
                     if let Some(_) = widget.as_ui() {
                         self.ui_rects
+                            .lock()
+                            .unwrap()
                             .insert(widget_id.clone(), rect_stack.pop().unwrap());
                     } else {
                         panic!("widget with id {} is not a Ui widget", widget_id);
@@ -108,33 +112,6 @@ impl Pipeline {
                 } else {
                     panic!("widget with id {} not found", widget_id);
                 }
-            }
-        }
-        Ok(())
-    }
-    pub fn widget_tick(
-        &self,
-        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-        event: &Option<Event>,
-    ) -> Result<()> {
-        for widget in self.widgets.values() {
-            // do tick for widget
-            widget.tick()?;
-        }
-
-        // draw ui and handle events
-        for (widget_id, rect) in &self.ui_rects {
-            if let Some(widget) = self.widgets.get(widget_id) {
-                if let Some(ui) = widget.as_ui() {
-                    ui.draw_tick(terminal, *rect)?;
-                    if let Some(event) = event {
-                        ui.event_tick(event)?;
-                    }
-                } else {
-                    panic!("widget with id {} is not a Ui widget", widget_id);
-                }
-            } else {
-                panic!("widget with id {} not found", widget_id);
             }
         }
         Ok(())

@@ -7,18 +7,18 @@ impl Filter {
     // to update the list of filtered books
     // and create highlights
     pub(super) fn update(&self) -> Result<()> {
-        if self.input.borrow().is_empty() {
-            *self.filtered_uuids.borrow_mut() = self.books_info.keys().cloned().collect();
-            *self.books_highlights.borrow_mut() = BooksHighlights::new();
-            if !self.filtered_uuids.borrow().is_empty() {
-                self.table_state.borrow_mut().select(Some(0));
+        if self.input.lock().unwrap().is_empty() {
+            *self.filtered_uuids.lock().unwrap() = self.books_info.keys().cloned().collect();
+            *self.books_highlights.lock().unwrap() = BooksHighlights::new();
+            if !self.filtered_uuids.lock().unwrap().is_empty() {
+                self.table_state.lock().unwrap().select(Some(0));
             } else {
-                self.table_state.borrow_mut().select(None);
+                self.table_state.lock().unwrap().select(None);
             }
             return Ok(());
         }
 
-        let input_lower_case = self.input.borrow().to_lowercase().replace(" ", "");
+        let input_lower_case = self.input.lock().unwrap().to_lowercase().replace(" ", "");
         let mut errors: Vec<anyhow::Error> = Vec::new();
 
         // get iterator of result
@@ -53,13 +53,14 @@ impl Filter {
             return Err(anyhow::anyhow!(error_messages));
         }
 
-        *self.filtered_uuids.borrow_mut() = results.iter().map(|(uuid, _)| uuid.clone()).collect();
-        *self.books_highlights.borrow_mut() = results.into_iter().collect();
+        *self.filtered_uuids.lock().unwrap() =
+            results.iter().map(|(uuid, _)| uuid.clone()).collect();
+        *self.books_highlights.lock().unwrap() = results.into_iter().collect();
 
-        if !self.filtered_uuids.borrow().is_empty() {
-            self.table_state.borrow_mut().select(Some(0));
+        if !self.filtered_uuids.lock().unwrap().is_empty() {
+            self.table_state.lock().unwrap().select(Some(0));
         } else {
-            self.table_state.borrow_mut().select(None);
+            self.table_state.lock().unwrap().select(None);
         }
 
         Ok(())
@@ -85,7 +86,9 @@ impl Filter {
                             name
                         ))
                     })
-            }?;
+            }
+            .with_context(|| format!("failed to translate input for book version '{}'", name))?;
+
             let book_highlights = {
                 let inputs = vec![input_i18n];
                 let (title_highlights, series_highlights, tags_highlights, authors_highlights) = (

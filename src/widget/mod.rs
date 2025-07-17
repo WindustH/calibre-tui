@@ -1,17 +1,16 @@
+use crate::i18n::filter::Handler as I18nHandler;
 use crate::ui::filter::Handler as UiHandler;
-use crate::utils::book::{Uuid, Uuids};
-use crate::{i18n::filter::Handler as I18nHandler, utils::book::Books};
+use crate::utils::book::{Books, Uuid, Uuids};
 use anyhow::Result;
 use crossterm::event::Event;
 use ratatui::layout::Rect;
 use ratatui::prelude::CrosstermBackend;
 use ratatui::{Terminal, widgets::TableState};
 use std::any::Any;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Stdout;
-use std::path::PathBuf;
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 use strum_macros::{Display, EnumString};
 
 pub mod filter;
@@ -34,16 +33,10 @@ pub enum WidgetClass {
     Open,
 }
 
-#[derive(Debug, Clone)]
-pub enum ControlCode {
-    Quit,
-    Defocus,
-}
-
 pub trait Ui {
     fn draw_tick(
         &self,
-        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        terminal: Arc<Mutex<Terminal<CrosstermBackend<Stdout>>>>,
         rect: Rect,
     ) -> Result<()>;
     fn event_tick(&self, event: &Event) -> Result<()>;
@@ -52,7 +45,7 @@ pub trait Ui {
 /// widget should be able to handle input from
 /// other widgets and send output to other widgets
 /// in a tick loop
-pub trait Widget {
+pub trait Widget:Send + Sync {
     fn tick(&self) -> Result<()>;
     fn connect(&self, channel_name: &str, socket_name: &str, plug: Box<dyn Any>) -> Result<()>;
     fn get_socket_type(&self, socket_name: &str) -> Result<ChannelDataType>;
@@ -60,36 +53,33 @@ pub trait Widget {
 }
 
 pub struct Filter {
+    // be read in mutiple threads
+    books: Arc<Books>,
+    // only be read when doing widget tick
     books_info: filter::BooksInfo,
-    // use refcell to support interior mutability
-    // change when doing update
-    filtered_uuids: RefCell<Uuids>,
-    books_highlights: RefCell<filter::BooksHighlights>,
-
-    // change when nagivating
-    table_state: RefCell<TableState>,
-    // change when got input
-    input: RefCell<String>,
-    exit_on_open: bool,
     i18n_handler: I18nHandler,
+    // only be read when drawing ui
     ui_handler: UiHandler,
-    books: Books,
+
+    // change when doing widget tick
+    filtered_uuids: Arc<Mutex<Uuids>>,
+    books_highlights: Arc<Mutex<filter::BooksHighlights>>,
+    table_state: Arc<Mutex<TableState>>,
+    input: Arc<Mutex<String>>,
+
     // mark_signal_receivers: HashMap<String, mpsc::Receiver<String>>,
 
     // send selected book's uuid to other widgets
-    selected_uuid_senders: RefCell<HashMap<String, mpsc::Sender<Uuid>>>,
+    selected_uuid_senders: Arc<Mutex<HashMap<String, mpsc::Sender<Uuid>>>>,
     // send hovered book's uuid to other widgets
     // when hovered book is changed
-    hovered_uuid_senders: RefCell<HashMap<String, mpsc::Sender<Uuid>>>,
+    hovered_uuid_senders: Arc<Mutex<HashMap<String, mpsc::Sender<Uuid>>>>,
     // send control signal to pipeline manager
-    control_signal_sender: RefCell<HashMap<String, mpsc::Sender<ControlCode>>>,
-    // send status code to other widgets
-    // status_code_senders: HashMap<String, mpsc::Sender<StatusCode>>,
 }
 
 pub struct Open {
-    library_path: PathBuf,
-    receivers: RefCell<HashMap<String, mpsc::Receiver<Uuid>>>,
+    books: Arc<Books>,
+    receivers: Arc<Mutex<HashMap<String, mpsc::Receiver<Uuid>>>>,
     // send status code to other widgets
     // status_code_senders: HashMap<String, mpsc::Sender<StatusCode>>,
 }

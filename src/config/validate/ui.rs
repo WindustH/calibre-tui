@@ -25,7 +25,7 @@ pub mod filter {
                 // try to insert label into a hashset
                 for column in &raw {
                     if !seen_names.insert(column.label.clone()) {
-                        return Err(format!("Duplicate column name found: '{}'", column.label));
+                        return Err(format!("duplicate column name found: '{}'", column.label));
                     }
                 }
                 Ok(Columns { 0: raw.0 })

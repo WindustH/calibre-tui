@@ -1,14 +1,13 @@
 use crate::i18n::filter::TString;
-use crate::utils::db::load_books_from_db;
-use crate::utils::book::Uuids;
-use crate::widget::{ControlCode, Filter};
-use anyhow::Result;
+use crate::utils::book::{Books, Uuids};
+use crate::widget::Filter;
+use anyhow::{Context, Result};
 use ratatui::widgets::TableState;
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 mod ui;
-mod widget;
 mod update;
+mod widget;
 
 #[derive(Debug, Clone)]
 // a translated version of a book's info
@@ -41,17 +40,16 @@ pub type BooksHighlights = HashMap<String, BookHighlights>;
 
 impl Filter {
     // initialize filter command
-    pub fn new(
-        config: &crate::config::Config,
-        exit_on_open: bool,
-    ) -> Result<Self> {
+    pub fn new(config: &crate::config::Config, books: Arc<Books>) -> Result<Self> {
         // create i18n handler
-        let i18n_handler = crate::i18n::filter::Handler::new(&config.i18n.filter)?;
-        let ui_handler = crate::ui::filter::Handler::new(&config.ui.filter)?;
+        let i18n_handler = crate::i18n::filter::Handler::new(&config.i18n.filter)
+            .context("failed to create i18n handler")?;
+        let ui_handler = crate::ui::filter::Handler::new(&config.ui.filter)
+            .context("failed to create ui handler")?;
         // initialize table state
         let mut table_state = TableState::default();
-        let database=load_books_from_db(&config.app.library_path)?;
-        if !database.is_empty() {
+
+        if !books.is_empty() {
             table_state.select(Some(0));
         }
 
@@ -61,7 +59,7 @@ impl Filter {
         let mut books_info = BooksInfo::new();
 
         // iterate through books
-        for (uuid, book) in &database {
+        for (uuid, book) in books.iter() {
             let mut versions = Info::new();
             // prebuild tags and authors into string
             let authors_str = book.authors.join(" & ");
@@ -117,56 +115,53 @@ impl Filter {
             filtered_uuids.push(uuid.to_string());
         }
         Ok(Self {
-            books_highlights: RefCell::new(books_highlights),
+            books,
+            books_highlights: Arc::new(Mutex::new(books_highlights)),
             books_info,
-            filtered_uuids: RefCell::new(filtered_uuids),
-            table_state: RefCell::new(table_state),
-            input: RefCell::new(String::new()),
-            exit_on_open,
+            filtered_uuids: Arc::new(Mutex::new(filtered_uuids)),
+            table_state: Arc::new(Mutex::new(table_state)),
+            input: Arc::new(Mutex::new(String::new())),
             i18n_handler,
             ui_handler,
-            books: database,
-            selected_uuid_senders: RefCell::new(HashMap::new()),
-            hovered_uuid_senders:RefCell::new(HashMap::new()),
-            control_signal_sender: RefCell::new(HashMap::new()),
-            // status_code_senders: HashMap::new(),
+            selected_uuid_senders: Arc::new(Mutex::new(HashMap::new())),
+            hovered_uuid_senders: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
     // nagivate up
     fn previous_item(&self) {
-        let i = match self.table_state.borrow().selected() {
+        let i = match self.table_state.lock().unwrap().selected() {
             Some(i) => {
-                if self.filtered_uuids.borrow().is_empty() {
+                if self.filtered_uuids.lock().unwrap().is_empty() {
                     0
                 } else if i == 0 {
-                    self.filtered_uuids.borrow().len() - 1
+                    self.filtered_uuids.lock().unwrap().len() - 1
                 } else {
                     i - 1
                 }
             }
-            None if !self.filtered_uuids.borrow().is_empty() => 0,
+            None if !self.filtered_uuids.lock().unwrap().is_empty() => 0,
             _ => 0,
         };
-        self.table_state.borrow_mut().select(Some(i));
+        self.table_state.lock().unwrap().select(Some(i));
     }
 
     // nagivate down
     fn next_item(&self) {
-        let i = match self.table_state.borrow().selected() {
+        let i = match self.table_state.lock().unwrap().selected() {
             Some(i) => {
-                if self.filtered_uuids.borrow().is_empty() {
+                if self.filtered_uuids.lock().unwrap().is_empty() {
                     0
-                } else if i >= self.filtered_uuids.borrow().len() - 1 {
+                } else if i >= self.filtered_uuids.lock().unwrap().len() - 1 {
                     0
                 } else {
                     i + 1
                 }
             }
-            None if !self.filtered_uuids.borrow().is_empty() => 0,
+            None if !self.filtered_uuids.lock().unwrap().is_empty() => 0,
             _ => 0,
         };
-        self.table_state.borrow_mut().select(Some(i));
+        self.table_state.lock().unwrap().select(Some(i));
     }
 
     // get the uuids of hovered book
@@ -181,35 +176,16 @@ impl Filter {
 
     pub fn send_selected_uuid(&self, uuid: String) -> Result<()> {
         // send selected uuid to all senders
-        for sender in self.selected_uuid_senders.borrow().values() {
+        for sender in self.selected_uuid_senders.lock().unwrap().values() {
             sender.send(uuid.clone())?;
         }
         Ok(())
     }
     pub fn send_hovered_uuid(&self, uuid: String) -> Result<()> {
         // send hovered uuid to all senders
-        for sender in self.hovered_uuid_senders.borrow().values() {
+        for sender in self.hovered_uuid_senders.lock().unwrap().values() {
             sender.send(uuid.clone())?;
         }
         Ok(())
     }
-    pub fn send_control_signal(&self, signal: ControlCode) -> Result<()> {
-        for sender in self.control_signal_sender.borrow().values() {
-            sender.send(signal.clone())?;
-        }
-        Ok(())
-    }
-    // // get user's input in the inputbox
-    // pub fn get_input(&self) -> &String {
-    //     &self.input
-    // }
-    // pub fn get_table_state(&self) -> Option<usize> {
-    //     self.table_state.selected()
-    // }
-    // pub fn get_filtered_uuids(&self) -> &Uuids {
-    //     &self.filtered_uuids
-    // }
-    // pub fn get_books_highlights(&self) -> &BooksHighlights {
-    //     &self.books_highlights
-    // }
 }

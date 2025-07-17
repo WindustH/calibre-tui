@@ -127,7 +127,10 @@ impl Pinyin {
                 }
 
                 if !found_match {
-                    let ch = remaining_pinyin.chars().next().unwrap();
+                    let ch = match remaining_pinyin.chars().next() {
+                        Some(c) => c,
+                        None => break, // no more characters to process
+                    };
                     result.push(ch);
                     i += ch.len_utf8();
                 }
