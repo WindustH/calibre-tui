@@ -25,31 +25,43 @@ impl Widget for Filter {
             Socket::SendSelectedUuid => {
                 if let Ok(sender) = plug.downcast::<std::sync::mpsc::Sender<String>>() {
                     // check if the channel_name already exists
-                    if self.selected_uuid_senders.borrow().contains_key(channel_id) {
-                        Err(anyhow::anyhow!("channel {} already exists", channel_id))?;
+                    if self
+                        .selected_uuid_senders
+                        .lock()
+                        .unwrap()
+                        .contains_key(channel_id)
+                    {
+                        return Err(anyhow::anyhow!("channel {} already exists", channel_id));
                     } else {
                         // insert the sender into the selected_senders map
                         self.selected_uuid_senders
-                            .borrow_mut()
+                            .lock()
+                            .unwrap()
                             .insert(channel_id.to_string(), *sender);
                     }
                 } else {
-                    Err(anyhow::anyhow!("plug is not a mpsc::Sender<String>"))?;
+                    return Err(anyhow::anyhow!("plug is not a mpsc::Sender<String>"));
                 }
             }
             Socket::SendHoverdUuid => {
                 if let Ok(sender) = plug.downcast::<std::sync::mpsc::Sender<String>>() {
                     // check if the channel_name already exists
-                    if self.hovered_uuid_senders.borrow().contains_key(channel_id) {
-                        Err(anyhow::anyhow!("channel {} already exists", channel_id))?;
+                    if self
+                        .hovered_uuid_senders
+                        .lock()
+                        .unwrap()
+                        .contains_key(channel_id)
+                    {
+                        return Err(anyhow::anyhow!("channel {} already exists", channel_id));
                     } else {
                         // insert the sender into the hovered_senders map
                         self.hovered_uuid_senders
-                            .borrow_mut()
+                            .lock()
+                            .unwrap()
                             .insert(channel_id.to_string(), *sender);
                     }
                 } else {
-                    Err(anyhow::anyhow!("plug is not a mpsc::Sender<String>"))?;
+                    return Err(anyhow::anyhow!("plug is not a mpsc::Sender<String>"));
                 }
             }
         }

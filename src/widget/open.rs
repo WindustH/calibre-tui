@@ -1,20 +1,18 @@
-use crate::utils::book::Uuid;
-use crate::utils::db::get_book_by_uuid_from_db;
+use crate::utils::book::{Books, Uuid};
 use crate::widget::{ChannelDataType, Open, Ui, Widget};
 use anyhow::Result;
 use std::any::Any;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use strum_macros::{Display, EnumString};
 
 impl Open {
-    pub fn new(library_path: PathBuf) -> Self {
+    pub fn new(books: Arc<Books>) -> Self {
         Self {
-            library_path,
-            receivers: RefCell::new(HashMap::new()),
+            books,
+            receivers: Arc::new(Mutex::new(HashMap::new())),
             // status_code_senders: HashMap::new(),
         }
     }
@@ -29,18 +27,23 @@ enum Socket {
 impl Widget for Open {
     fn tick(&self) -> Result<()> {
         // iterate through all receivers
-        for (_, receiver) in self.receivers.borrow_mut().iter_mut() {
+        for (_, receiver) in self.receivers.lock().unwrap().iter_mut() {
             // iterate through all messages in the receiver
             for msg in receiver.try_iter() {
-                if let Some(book) = get_book_by_uuid_from_db(&self.library_path, &msg)? {
+                if let Some(book) = self.books.get(&msg) {
                     // find the path and try to open
                     match open::that(PathBuf::from(&book.path)) {
                         Ok(_) => (),
-                        Err(e) => panic!("encounter error when open books: {:?}", e),
+                        Err(e) => {
+                            return Err(anyhow::anyhow!(
+                                "encounter error when open books: {:?}",
+                                e
+                            ));
+                        }
                     }
                 } else {
                     // can't find the book path
-                    Err(anyhow::anyhow!("failed to get book by uuid: {}", msg))?;
+                    return Err(anyhow::anyhow!("failed to get book by uuid: {}", msg));
                 }
             }
         }
@@ -52,16 +55,17 @@ impl Widget for Open {
             Socket::RecvUuidToOpen => {
                 if let Ok(receiver) = plug.downcast::<mpsc::Receiver<Uuid>>() {
                     // check if the channel_name already exists
-                    if self.receivers.borrow().contains_key(channel_id) {
-                        Err(anyhow::anyhow!("channel {} already exists", channel_id))?;
+                    if self.receivers.lock().unwrap().contains_key(channel_id) {
+                        return Err(anyhow::anyhow!("channel {} already exists", channel_id));
                     } else {
                         // insert the receiver into the receivers map
                         self.receivers
-                            .borrow_mut()
+                            .lock()
+                            .unwrap()
                             .insert(channel_id.to_string(), *receiver);
                     }
                 } else {
-                    Err(anyhow::anyhow!("plug is not a mpsc::Receiver<String>"))?;
+                    return Err(anyhow::anyhow!("plug is not a mpsc::Receiver<String>"));
                 }
                 Ok(())
             }

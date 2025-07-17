@@ -3,23 +3,23 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 pub mod app;
-pub mod widget;
-pub mod i18n;
-pub mod ui;
-pub mod pipeline;
-pub mod validate;
 mod default;
+pub mod i18n;
+pub mod pipeline;
+pub mod ui;
+pub mod validate;
+pub mod widget;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Pipeline {
-    pub instances:Vec<pipeline::Instance>,
+    pub instances: Vec<pipeline::Instance>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(try_from = "validate::app::Raw")]
 pub struct App {
     pub library_path: PathBuf,
-    pub default_instance: String
+    pub default_instance: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -31,7 +31,7 @@ pub struct I18n {
 
 pub struct Ui {
     #[serde(default)]
-    pub filter: ui::Filter
+    pub filter: ui::Filter,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -43,7 +43,7 @@ pub struct Config {
     #[serde(default)]
     pub ui: Ui,
     #[serde(default)]
-    pub pipeline: Pipeline
+    pub pipeline: Pipeline,
 }
 
 /// load and parse config file
@@ -79,12 +79,7 @@ pub fn load_config() -> Result<Config> {
         .with_context(|| format!("failed to read config file: {:?}", config_file_path))?;
 
     let final_config: Config = toml::from_str(&content)
-        .with_context(|| {
-            format!(
-                "fail to parse config file '{}'",
-                config_file_path.display()
-            )
-        })?;
+        .with_context(|| format!("fail to parse config file '{}'", config_file_path.display()))?;
 
     Ok(final_config)
 }
