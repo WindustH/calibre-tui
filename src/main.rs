@@ -41,23 +41,23 @@ fn main() -> Result<()> {
     let _args = Args::parse();
 
     // setup
-    let config = config::load_config().context("Failed to load configuration")?;
-    enable_raw_mode().context("Failed to enable raw mode")?;
+    let config = config::load_config().context("failed to load configuration")?;
+    enable_raw_mode().context("failed to enable raw mode")?;
 
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
-        .context("Failed to enter alternate screen")?;
+        .context("failed to enter alternate screen")?;
 
     let backend = CrosstermBackend::new(stdout);
     let terminal = Arc::new(Mutex::new(
-        Terminal::new(backend).context("Failed to create terminal")?,
+        Terminal::new(backend).context("failed to create terminal")?,
     ));
 
     // pipeline
     let pipeline = Arc::new(pipeline::Pipeline::new(&config, "filter-and-open"));
     pipeline
         .update_ui_rects(terminal.lock().unwrap().size()?)
-        .context("Failed to update UI rectangles")?;
+        .context("failed to update ui rect")?;
 
     let (event_tx, event_rx) = mpsc::channel::<Event>();
     let (control_tx, _control_rx) = mpsc::channel::<ControlCode>();
