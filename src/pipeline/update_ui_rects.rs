@@ -1,14 +1,8 @@
 use crate::config::pipeline::Area;
 use crate::pipeline::Pipeline;
 use anyhow::Result;
-use crossterm::event::Event;
-use ratatui::Terminal;
 use ratatui::layout::Layout;
 use ratatui::layout::Rect;
-use ratatui::prelude::CrosstermBackend;
-use std::io::Stdout;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 impl Pipeline {
     // calculate the layout of the ui widgets based on the terminal size
