@@ -90,21 +90,24 @@ fn main() -> Result<()> {
     // ui draw threads
     let mut ui_control_txs = HashMap::new();
     let ui_rects = pipeline.ui_rects.lock().unwrap().clone();
-    for (widget_id, rect) in ui_rects.iter() {
+    for (widget_id, _rect) in ui_rects.iter() {
         let (tx, rx) = mpsc::channel::<ControlCode>();
         ui_control_txs.insert(widget_id.clone(), tx);
 
         let widget = pipeline.widgets.get(widget_id).unwrap().clone();
         let terminal = Arc::clone(&terminal);
-        let rect = *rect;
+        let pipeline_clone = Arc::clone(&pipeline);
+        let widget_id_clone = widget_id.clone();
 
         thread::spawn(move || {
             let frame_duration = Duration::from_millis(1000 / UI_REFRESH_RATE);
             loop {
                 let start = Instant::now();
                 if let Some(ui) = widget.as_ui() {
-                    // Errors should be handled, e.g., by logging
-                    let _ = ui.draw_tick(Arc::clone(&terminal), rect);
+                    if let Some(rect) = pipeline_clone.ui_rects.lock().unwrap().get(&widget_id_clone).cloned() {
+                        // Errors should be handled, e.g., by logging
+                        let _ = ui.draw_tick(Arc::clone(&terminal), rect);
+                    }
                 }
 
                 if let Ok(ControlCode::Quit) = rx.try_recv() {
