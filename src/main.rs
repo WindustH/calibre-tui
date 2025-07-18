@@ -168,13 +168,17 @@ fn main() -> Result<()> {
     // the pipeline event thread will exit on its own when the main event loop ends.
 
     // cleanup
-    disable_raw_mode()?;
-    execute!(
-        terminal.lock().unwrap().backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.lock().unwrap().show_cursor()?;
+    {
+        // Drop the terminal lock before cleanup to avoid deadlocks
+        let mut terminal = terminal.lock().unwrap();
+        disable_raw_mode()?;
+        execute!(
+            terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        )?;
+        terminal.show_cursor()?;
+    }
 
     Ok(())
 }
