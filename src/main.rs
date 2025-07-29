@@ -129,9 +129,12 @@ fn main() -> Result<()> {
         let tick_duration = Duration::from_millis(1000 / TICK_RATE);
         loop {
             let start = Instant::now();
-            if let Some(event) = pipeline_clone.event_tick().unwrap() {
-                if event_tx.send(event).is_err() {
-                    break; // Main thread has disconnected
+            // Collect all available events in a batch
+            if let Ok(events) = pipeline_clone.event_tick_batch() {
+                for event in events {
+                    if event_tx.send(event).is_err() {
+                        break; // Main thread has disconnected
+                    }
                 }
             }
             if *pipeline_clone.should_exit.lock().unwrap() {
@@ -147,12 +150,26 @@ fn main() -> Result<()> {
     });
 
     // main event loop
-    // this loop is event-driven and does not need a rate limit
-    // tt blocks on event_rx until an event is received
-    for event in event_rx {
-        for widget in pipeline.widgets.values() {
-            if let Some(ui) = widget.as_ui() {
-                let _ = ui.event_tick(&event);
+    // Handle all received events in a single tick to avoid latency on fast input
+    loop {
+        // Block for the first event
+        let event = match event_rx.recv() {
+            Ok(ev) => ev,
+            Err(_) => break, // channel closed
+        };
+
+        // Collect all pending events (including the first)
+        let mut events = vec![event];
+        while let Ok(ev) = event_rx.try_recv() {
+            events.push(ev);
+        }
+
+        // Process all events in this tick
+        for event in events {
+            for widget in pipeline.widgets.values() {
+                if let Some(ui) = widget.as_ui() {
+                    let _ = ui.event_tick(&event);
+                }
             }
         }
     }
