@@ -1,21 +1,18 @@
 [package]
 name = "calibre-tui"
-version = "0.2.0"
+version = "0.5.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
-crossterm = "0.27"
-dirs = "5.0"
-open = "5.0"
-pinyin = { version = "0.10", features = ["heteronym"] }
-ratatui = { version = "0.26.1", features = ["all-widgets"] }
-rusqlite = { version = "0.31" }
+clap = { version = "4.6", features = ["derive"] }
+crossterm = "0.29"
+dirs = "6.0"
+open = "5.3"
+pinyin = { version = "0.11", features = ["heteronym"] }
+ratatui = { version = "0.30", features = ["all-widgets"] }
+rusqlite = "0.39"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0" # 添加这一行
-toml = "0.8"
-unicode-width = "0.1"
-clap = { version = "4.5.11", features = ["derive"] }
-strum = "0.24"
-strum_macros = "0.24"
+serde_json = "1.0"
+toml = "1.1"
+unicode-width = "0.2"

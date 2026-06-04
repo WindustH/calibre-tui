@@ -1,53 +1,179 @@
-use std::collections::HashMap;
-// use crate::utils::book::Metadata;
+use crate::config::{FilterConfig, FilterTranslator};
 use anyhow::Result;
 
+mod french;
+mod german;
+mod japanese;
 mod pinyin;
+mod russian;
+mod spanish;
 
-// translated string with token indices
-pub type TString=(String, Vec<usize>);
-// inermediate layer between two languages
-pub trait IR: Send + Sync + 'static {
-    // translate book's info
-    fn trans_book_info(&self, s: &str) -> Result<TString>;
-
-    // translate input string
-    fn trans_input(&self, s:&str)->Result<String>;
-    // is this translator enabled?
-    fn is_enabled(&self) -> bool;
+#[derive(Debug, Clone)]
+pub struct IndexedText {
+  pub text: String,
+  pub token_bounds: Vec<usize>,
 }
 
-
-// i18n handler
-pub struct Handler {
-    pub translators: HashMap<String, Box<dyn IR>>,
+pub trait Translator {
+  fn index_text(&self, text: &str) -> Result<IndexedText>;
+  fn normalize_query(&self, query: &str) -> Result<String>;
 }
 
-impl Handler {
-    pub fn new(config: &crate::config::i18n::Filter) -> Result<Self> {
-        // modify here to add more translators
+pub struct Translators {
+  filters: Vec<Box<dyn Translator>>,
+}
 
-        // match (pinyin::Pinyin::new(&config.pinyin),translator::Translator::new(&config.translator)) {
-        //     (Ok(pinyin_handler),Ok(new_handler)) => {
-        //         let mut translators = HashMap::<String, Box<dyn IR>>::new();
+impl Translators {
+  pub fn from_config(config: &FilterConfig) -> Result<Self> {
+    let mut filters: Vec<Box<dyn Translator>> = Vec::new();
 
-        //         translators.insert("pinyin".to_string(), Box::new(pinyin_handler));
-        //         translators.insert("translator".to_string(), Box::new(translator_handler));
-
-        //         Ok(Self { translators })
-        //     }
-        //     ...
-        // }
-
-        match pinyin::Pinyin::new(&config.pinyin) {
-            Ok(pinyin_handler) => {
-                let mut translators = HashMap::<String, Box<dyn IR>>::new();
-
-                translators.insert("pinyin".to_string(), Box::new(pinyin_handler));
-
-                Ok(Self { translators })
-            }
-            Err(e) => Err(e),
+    for translator in &config.translators {
+      match translator {
+        FilterTranslator::Pinyin => {
+          filters.push(Box::new(pinyin::PinyinFilter::new(config)));
         }
+        FilterTranslator::Romaji => {
+          filters.push(Box::new(japanese::RomajiFilter));
+        }
+        FilterTranslator::GermanLatin => {
+          filters.push(Box::new(german::GermanLatinFilter));
+        }
+        FilterTranslator::FrenchLatin => {
+          filters.push(Box::new(french::FrenchLatinFilter));
+        }
+        FilterTranslator::SpanishLatin => {
+          filters.push(Box::new(spanish::SpanishLatinFilter));
+        }
+        FilterTranslator::RussianLatin => {
+          filters.push(Box::new(russian::RussianLatinFilter));
+        }
+      }
     }
+
+    Ok(Self { filters })
+  }
+
+  pub fn index_texts(&self, text: &str) -> Result<Vec<IndexedText>> {
+    self
+      .filters
+      .iter()
+      .map(|filter| filter.index_text(text))
+      .collect()
+  }
+
+  pub fn normalize_queries(&self, query: &str) -> Result<Vec<String>> {
+    self
+      .filters
+      .iter()
+      .map(|filter| filter.normalize_query(query))
+      .collect()
+  }
+}
+
+pub fn index_plain_text(text: &str) -> IndexedText {
+  let mut indexed = String::new();
+  let mut token_bounds = vec![0];
+
+  for ch in text.chars().filter(|ch| !ch.is_whitespace()) {
+    for lower in ch.to_lowercase() {
+      indexed.push(lower);
+    }
+    token_bounds.push(indexed.chars().count());
+  }
+
+  IndexedText {
+    text: indexed,
+    token_bounds,
+  }
+}
+
+pub fn normalize_plain_query(query: &str) -> String {
+  index_plain_text(query).text
+}
+
+fn index_by_char(text: &str, transliterate: fn(char) -> String) -> IndexedText {
+  let mut indexed = String::new();
+  let mut token_bounds = vec![0];
+
+  for ch in text.chars().filter(|ch| !ch.is_whitespace()) {
+    indexed.push_str(&translated_search_text(ch, &transliterate(ch)));
+    token_bounds.push(indexed.chars().count());
+  }
+
+  IndexedText {
+    text: indexed,
+    token_bounds,
+  }
+}
+
+fn translated_search_text(source: char, translated: &str) -> String {
+  let ascii = ascii_search_text(translated);
+  if !ascii.is_empty() {
+    return ascii;
+  }
+
+  if translated.is_empty() || !source.is_alphanumeric() {
+    return String::new();
+  }
+
+  source.to_lowercase().collect()
+}
+
+fn ascii_search_text(text: &str) -> String {
+  text
+    .chars()
+    .filter_map(|ch| {
+      if ch.is_ascii_alphanumeric() {
+        Some(ch.to_ascii_lowercase())
+      } else {
+        None
+      }
+    })
+    .collect()
+}
+
+fn latin_char(ch: char) -> String {
+  if let Some(converted) = fullwidth_ascii(ch) {
+    return converted.to_string();
+  }
+
+  match ch {
+    'À' | 'Á' | 'Â' | 'Ã' | 'Ä' | 'Å' | 'Ā' | 'Ă' | 'Ą' | 'à' | 'á' | 'â' | 'ã' | 'ä' | 'å'
+    | 'ā' | 'ă' | 'ą' => "a".to_string(),
+    'Æ' | 'æ' => "ae".to_string(),
+    'Ç' | 'Ć' | 'Ĉ' | 'Ċ' | 'Č' | 'ç' | 'ć' | 'ĉ' | 'ċ' | 'č' => "c".to_string(),
+    'Ð' | 'Ď' | 'Đ' | 'ð' | 'ď' | 'đ' => "d".to_string(),
+    'È' | 'É' | 'Ê' | 'Ë' | 'Ē' | 'Ĕ' | 'Ė' | 'Ę' | 'Ě' | 'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ĕ'
+    | 'ė' | 'ę' | 'ě' => "e".to_string(),
+    'Ĝ' | 'Ğ' | 'Ġ' | 'Ģ' | 'ĝ' | 'ğ' | 'ġ' | 'ģ' => "g".to_string(),
+    'Ĥ' | 'Ħ' | 'ĥ' | 'ħ' => "h".to_string(),
+    'Ì' | 'Í' | 'Î' | 'Ï' | 'Ĩ' | 'Ī' | 'Ĭ' | 'Į' | 'İ' | 'ì' | 'í' | 'î' | 'ï' | 'ĩ' | 'ī'
+    | 'ĭ' | 'į' | 'ı' => "i".to_string(),
+    'Ĵ' | 'ĵ' => "j".to_string(),
+    'Ķ' | 'ķ' => "k".to_string(),
+    'Ĺ' | 'Ļ' | 'Ľ' | 'Ŀ' | 'Ł' | 'ĺ' | 'ļ' | 'ľ' | 'ŀ' | 'ł' => "l".to_string(),
+    'Ñ' | 'Ń' | 'Ņ' | 'Ň' | 'ñ' | 'ń' | 'ņ' | 'ň' => "n".to_string(),
+    'Ò' | 'Ó' | 'Ô' | 'Õ' | 'Ö' | 'Ø' | 'Ō' | 'Ŏ' | 'Ő' | 'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø'
+    | 'ō' | 'ŏ' | 'ő' => "o".to_string(),
+    'Œ' | 'œ' => "oe".to_string(),
+    'Ŕ' | 'Ŗ' | 'Ř' | 'ŕ' | 'ŗ' | 'ř' => "r".to_string(),
+    'Ś' | 'Ŝ' | 'Ş' | 'Š' | 'ś' | 'ŝ' | 'ş' | 'š' => "s".to_string(),
+    'Ţ' | 'Ť' | 'Ŧ' | 'ţ' | 'ť' | 'ŧ' => "t".to_string(),
+    'Ù' | 'Ú' | 'Û' | 'Ü' | 'Ũ' | 'Ū' | 'Ŭ' | 'Ů' | 'Ű' | 'Ų' | 'ù' | 'ú' | 'û' | 'ü' | 'ũ'
+    | 'ū' | 'ŭ' | 'ů' | 'ű' | 'ų' => "u".to_string(),
+    'Ŵ' | 'ŵ' => "w".to_string(),
+    'Ý' | 'Ŷ' | 'Ÿ' | 'ý' | 'ÿ' | 'ŷ' => "y".to_string(),
+    'Ź' | 'Ż' | 'Ž' | 'ź' | 'ż' | 'ž' => "z".to_string(),
+    'Þ' | 'þ' => "th".to_string(),
+    _ => ch.to_lowercase().collect(),
+  }
+}
+
+fn fullwidth_ascii(ch: char) -> Option<char> {
+  match ch {
+    '０'..='９' => char::from_u32((ch as u32 - '０' as u32) + '0' as u32),
+    'Ａ'..='Ｚ' => char::from_u32((ch as u32 - 'Ａ' as u32) + 'A' as u32),
+    'ａ'..='ｚ' => char::from_u32((ch as u32 - 'ａ' as u32) + 'a' as u32),
+    _ => None,
+  }
 }

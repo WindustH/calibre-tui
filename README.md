@@ -1,128 +1,87 @@
 # Calibre TUI
 
-A Terminal User Interface (TUI) for Calibre, allowing you to search and open books from your Calibre library directly from the terminal.
+A small terminal UI for searching a Calibre library and opening books from the terminal.
 
+[中文](README.zh-CN.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
 
 https://github.com/user-attachments/assets/61323a3a-fc4e-4e2e-92d4-0740a1f7e1f6
 
-
-
 ### Features
 
-* **Terminal User Interface**: Interact with your Calibre library in a fast and efficient terminal-based UI.
-* **Book Search**: Filter through your books by title, author, series, and tags.
-* **Pinyin Search**: For users with Chinese book titles, you can search using Pinyin. This feature includes fuzzy search capabilities.
-* **Customizable UI**: Configure the look and feel of the application, including colors and table layouts, to your liking.
-* **Open Books**: Open books directly from the TUI.
+* Search by title, author, series, and tags. Space-separated terms are matched with logical AND.
+* Optional translators for Pinyin, Japanese, German, French, Spanish, and Russian search.
+* Multiple translators can be enabled at the same time. Original text search is always enabled.
+* Fixed, compact TUI layout with no UI/theme configuration.
+* Open the selected book directly from the TUI.
 
-### Install
-1.  **On Arch Linux**
-    ```bash
-    pacman -S calibre-tui
-    ```
 ### Build
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/WindustH/calibre-tui.git
-    cd calibre-tui
-    ```
-2.  **Build the project:**
-    ```bash
-    cargo build --release
-    ```
-3.  **Run the application:**
-    ```bash
-    ./target/release/calibre-tui
-    ```
+```bash
+cargo build --release
+./target/release/calibre-tui
+```
 
 ### Configuration
 
-The application can be configured via a `config.toml` file located in your system's configuration directory (`~/.config/calibre-tui/` on Linux).
-
-Here is an example of the default configuration:
+The config files are stored in `~/.config/calibre-tui/` on Linux. If they do not exist, the app writes default files.
 
 ```toml
-[app]
 library_path = ""
-# ---------------------
-[i18n.filter.pinyin]
-enabled = true
-fuzzy_enabled = true
-fuzzy_groups = [
-    ["ong", "on"],
+
+[filter]
+translators = ["pinyin", "romaji", "german-latin", "french-latin", "spanish-latin", "russian-latin"]
+pinyin_fuzzy = true
+pinyin_fuzzy_groups = [
+    ["on", "ong"],
     ["an", "ang"],
     ["en", "eng"],
     ["in", "ing"]
 ]
-# ---------------------
-[[ui.filter.table.columns]]
-label = "title"
-position = 0
-ratio = 40
-fg = "White"
-hovered_fg = "White"
-hovered_bg = "Blue"
-label_fg = "Blue"
-highlighted_fg = "Red"
-hovered_highlighted_fg="Yellow"
-# ---------------------
-[[ui.filter.table.columns]]
-label = "authors"
-position = 1
-ratio = 20
-fg = "Cyan"
-hovered_fg = "White"
-hovered_bg = "Blue"
-label_fg = "Blue"
-highlighted_fg= "Red"
-hovered_highlighted_fg="Yellow"
-# ---------------------
-[[ui.filter.table.columns]]
-label = "series"
-position = 2
-ratio = 20
-fg = "White"
-hovered_fg = "White"
-hovered_bg = "Blue"
-label_fg = "Blue"
-highlighted_fg= "Red"
-hovered_highlighted_fg="Yellow"
-# ---------------------
-[[ui.filter.table.columns]]
-label = "tags"
-position = 3
-ratio = 20
-fg = "Cyan"
-hovered_fg = "White"
-hovered_bg = "Blue"
-label_fg = "Blue"
-highlighted_fg= "Red"
-hovered_highlighted_fg="Yellow"
-# ---------------------
-
-[ui.filter]
-inputbox.border.fg = "Blue"
-table.border.fg = "Blue"
-inputbox.title.fg = "Blue"
-inputbox.fg = "White"
-table.title.fg = "Blue"
 ```
 
-* `library_path`: The path to your Calibre library. If left empty, the application will attempt to find it in common locations.
-* `i18n.filter.pinyin`: Configuration for Pinyin search.
-* `ui.filter.table.columns`: Defines the columns in the book list, their appearance, and layout.
-* `ui.filter`: Defines the colors for the input box and table borders.
+* `library_path`: Path to your Calibre library. Leave it empty to auto-detect common Calibre locations.
+* `filter.translators`: Search translators to enable. Supported values are `pinyin`, `romaji`, `german-latin`, `french-latin`, `spanish-latin`, and `russian-latin`.
+* `filter.pinyin_fuzzy`: Enables fuzzy Pinyin matching.
+* `filter.pinyin_fuzzy_groups`: Equivalent Pinyin fragments. The first item in each group is the canonical form.
+
+Translator behavior:
+
+* `pinyin`: Chinese Hanzi can be searched by Pinyin, with optional fuzzy groups.
+* `romaji`: Japanese kana can be searched by romaji. Full-width ASCII is normalized. Arbitrary Kanji readings are not inferred without a dictionary, but original text search still works.
+* `german-latin`: Accented Latin characters are folded, with German `ä/ö/ü/ß` matched as `ae/oe/ue/ss`.
+* `french-latin`: Accented Latin characters are folded, so `étranger` can be found by `etranger`.
+* `spanish-latin`: Accented Latin characters are folded, so `niñez` can be found by `ninez`.
+* `russian-latin`: Cyrillic can be searched by Latin transliteration, for example `Преступление` by `prestuplenie`.
+
+`keymap.toml` controls keyboard shortcuts:
+
+```toml
+quit = ["esc", "ctrl-c"]
+submit = ["enter"]
+move_up = ["up"]
+move_down = ["down"]
+page_up = ["pgup"]
+page_down = ["pgdown"]
+jump_start = ["home"]
+jump_end = ["end"]
+toggle_selection = ["tab"]
+select_all = ["ctrl-a"]
+clear_selection = ["ctrl-x"]
+delete_input = ["backspace"]
+```
+
+Key names support common keys like `enter`, `esc`, `tab`, `backspace`, `up`, `down`, `left`, `right`, `home`, `end`, `page-up`, `page-down`, `delete`, `insert`, `space`, single characters, and modifiers such as `ctrl-a`, `alt-x`, or `shift-tab`.
+Bindings can also be key sequences separated by spaces. For example, `jump_start = ["home", "ctrl-g g"]` and `jump_end = ["end", "ctrl-g G"]`.
 
 ### Usage
 
-* **Start the application:**
-    ```bash
-    calibre-tui
-    ```
-* **Keybindings:**
-    * `Up`/`Down` arrows or `Scroll`: Navigate the book list.
-    * `Enter`: Open the selected book.
-    * `Esc` or `Ctrl+C`: Quit the application.
-* **Command-line arguments:**
-    * `--exit-on-open`: The application will exit after opening a book.
+* `Up` / `Down` or mouse scroll: Move the cursor.
+* `PgUp` / `PgDown`: Move by one page.
+* `Home` / `End`: Jump to the first or last filtered result.
+* `Tab`: Toggle multi-selection for the current book.
+* `Ctrl+A`: Select all current filtered results.
+* `Ctrl+X`: Clear all selected books.
+* `Enter`: Open selected books, or the cursor book if nothing is selected.
+* `Esc` or `Ctrl+C`: Quit.
+* `--exit-on-submit`: Quit after submitting books.
+* `--print-path`: Print selected book paths to stdout instead of opening them.
