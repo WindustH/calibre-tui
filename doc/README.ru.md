@@ -2,7 +2,7 @@
 
 Небольшой терминальный интерфейс для поиска в библиотеке Calibre и открытия книг.
 
-[English](README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md)
+[English](../README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md)
 
 ### Возможности
 

@@ -2,7 +2,7 @@
 
 一个用于搜索 Calibre 书库并从终端打开书籍的轻量 TUI。
 
-[English](README.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
+[English](../README.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
 
 ### 功能
 

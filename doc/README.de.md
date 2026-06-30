@@ -2,7 +2,7 @@
 
 Eine kleine Terminal-Oberfläche zum Durchsuchen einer Calibre-Bibliothek und Öffnen von Büchern.
 
-[English](README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
+[English](../README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
 
 ### Funktionen
 

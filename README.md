@@ -2,7 +2,7 @@
 
 A small terminal UI for searching a Calibre library and opening books from the terminal.
 
-[中文](README.zh-CN.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
+[中文](doc/README.zh-CN.md) | [日本語](doc/README.ja.md) | [Deutsch](doc/README.de.md) | [Français](doc/README.fr.md) | [Español](doc/README.es.md) | [Русский](doc/README.ru.md)
 
 https://github.com/user-attachments/assets/61323a3a-fc4e-4e2e-92d4-0740a1f7e1f6
 
@@ -13,6 +13,34 @@ https://github.com/user-attachments/assets/61323a3a-fc4e-4e2e-92d4-0740a1f7e1f6
 * Multiple translators can be enabled at the same time. Original text search is always enabled.
 * Fixed, compact TUI layout with no UI/theme configuration.
 * Open the selected book directly from the TUI.
+
+### Installation
+
+Arch Linux AUR:
+
+```bash
+yay -S calibre-tui-bin
+```
+
+Alternative AUR packages:
+
+```bash
+yay -S calibre-tui      # build the latest stable release from source
+yay -S calibre-tui-git  # build the latest git version from source
+```
+
+Homebrew:
+
+```bash
+brew install WindustH/tap/calibre-tui
+```
+
+The Homebrew stable formula downloads a prebuilt release binary. To build the
+latest git version from source:
+
+```bash
+brew install --HEAD WindustH/tap/calibre-tui
+```
 
 ### Build
 

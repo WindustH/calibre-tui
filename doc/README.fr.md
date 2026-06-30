@@ -2,7 +2,7 @@
 
 Une petite interface terminal pour rechercher dans une bibliothèque Calibre et ouvrir des livres.
 
-[English](README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [Русский](README.ru.md)
+[English](../README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [Русский](README.ru.md)
 
 ### Fonctionnalités
 

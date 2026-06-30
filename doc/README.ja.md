@@ -2,7 +2,7 @@
 
 Calibre ライブラリを端末上で検索し、本を開くための小さな TUI です。
 
-[English](README.md) | [中文](README.zh-CN.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
+[English](../README.md) | [中文](README.zh-CN.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
 
 ### 機能
 
