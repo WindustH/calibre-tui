@@ -11,7 +11,7 @@ dirs = "6.0"
 open = "5.3"
 pinyin = { version = "0.11", features = ["heteronym"] }
 ratatui = { version = "0.30", features = ["all-widgets"] }
-rusqlite = "0.39"
+rusqlite = "0.40"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "1.1"
