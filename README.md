@@ -4,7 +4,7 @@ A small terminal UI for searching a Calibre library and opening books from the t
 
 [中文](doc/README.zh-CN.md) | [日本語](doc/README.ja.md) | [Deutsch](doc/README.de.md) | [Français](doc/README.fr.md) | [Español](doc/README.es.md) | [Русский](doc/README.ru.md)
 
-https://github.com/user-attachments/assets/61323a3a-fc4e-4e2e-92d4-0740a1f7e1f6
+https://github.com/user-attachments/assets/a7d2157c-68bc-468f-a478-57645b414864
 
 ### Features
 
