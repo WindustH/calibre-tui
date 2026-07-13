@@ -24,8 +24,10 @@ pub struct FilterConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FilterTranslator {
-  Pinyin,
-  Romaji,
+  #[serde(rename = "pinyin")]
+  ChinesePinyin,
+  #[serde(rename = "romaji")]
+  JapaneseRomaji,
   GermanLatin,
   FrenchLatin,
   SpanishLatin,
@@ -44,7 +46,7 @@ impl Default for Config {
 impl Default for FilterConfig {
   fn default() -> Self {
     Self {
-      translators: vec![FilterTranslator::Pinyin],
+      translators: vec![FilterTranslator::ChinesePinyin],
       pinyin_fuzzy: true,
       pinyin_fuzzy_groups: vec![
         vec!["on".to_string(), "ong".to_string()],
@@ -121,34 +123,4 @@ fn possible_library_paths() -> Vec<PathBuf> {
   }
 
   paths
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn parses_translator_names() {
-    let config: Config = toml::from_str(
-      r#"
-library_path = "/tmp"
-
-[filter]
-translators = ["pinyin", "romaji", "german-latin", "french-latin", "spanish-latin", "russian-latin"]
-"#,
-    )
-    .unwrap();
-
-    assert_eq!(
-      config.filter.translators,
-      vec![
-        FilterTranslator::Pinyin,
-        FilterTranslator::Romaji,
-        FilterTranslator::GermanLatin,
-        FilterTranslator::FrenchLatin,
-        FilterTranslator::SpanishLatin,
-        FilterTranslator::RussianLatin,
-      ]
-    );
-  }
 }

@@ -20,52 +20,52 @@ pub trait Translator {
 }
 
 pub struct Translators {
-  filters: Vec<Box<dyn Translator>>,
+  translators: Vec<Box<dyn Translator>>,
 }
 
 impl Translators {
   pub fn from_config(config: &FilterConfig) -> Result<Self> {
-    let mut filters: Vec<Box<dyn Translator>> = Vec::new();
+    let mut translators: Vec<Box<dyn Translator>> = Vec::new();
 
     for translator in &config.translators {
       match translator {
-        FilterTranslator::Pinyin => {
-          filters.push(Box::new(pinyin::PinyinFilter::new(config)));
+        FilterTranslator::ChinesePinyin => {
+          translators.push(Box::new(pinyin::ChinesePinyinTranslator::new(config)));
         }
-        FilterTranslator::Romaji => {
-          filters.push(Box::new(japanese::RomajiFilter));
+        FilterTranslator::JapaneseRomaji => {
+          translators.push(Box::new(japanese::JapaneseRomajiTranslator));
         }
         FilterTranslator::GermanLatin => {
-          filters.push(Box::new(german::GermanLatinFilter));
+          translators.push(Box::new(german::GermanLatinTranslator));
         }
         FilterTranslator::FrenchLatin => {
-          filters.push(Box::new(french::FrenchLatinFilter));
+          translators.push(Box::new(french::FrenchLatinTranslator));
         }
         FilterTranslator::SpanishLatin => {
-          filters.push(Box::new(spanish::SpanishLatinFilter));
+          translators.push(Box::new(spanish::SpanishLatinTranslator));
         }
         FilterTranslator::RussianLatin => {
-          filters.push(Box::new(russian::RussianLatinFilter));
+          translators.push(Box::new(russian::RussianLatinTranslator));
         }
       }
     }
 
-    Ok(Self { filters })
+    Ok(Self { translators })
   }
 
   pub fn index_texts(&self, text: &str) -> Result<Vec<IndexedText>> {
     self
-      .filters
+      .translators
       .iter()
-      .map(|filter| filter.index_text(text))
+      .map(|translator| translator.index_text(text))
       .collect()
   }
 
   pub fn normalize_queries(&self, query: &str) -> Result<Vec<String>> {
     self
-      .filters
+      .translators
       .iter()
-      .map(|filter| filter.normalize_query(query))
+      .map(|translator| translator.normalize_query(query))
       .collect()
   }
 }

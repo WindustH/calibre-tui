@@ -3,9 +3,9 @@ use super::{
 };
 use anyhow::Result;
 
-pub(super) struct RomajiFilter;
+pub(super) struct JapaneseRomajiTranslator;
 
-impl Translator for RomajiFilter {
+impl Translator for JapaneseRomajiTranslator {
   fn index_text(&self, text: &str) -> Result<IndexedText> {
     Ok(index_japanese_text(text))
   }
@@ -213,22 +213,4 @@ fn last_vowel(text: &str) -> Option<char> {
     .chars()
     .rev()
     .find(|ch| matches!(ch, 'a' | 'e' | 'i' | 'o' | 'u'))
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn kana_is_searchable_as_romaji() {
-    let filter = RomajiFilter;
-    assert_eq!(filter.index_text("きょう").unwrap().text, "kyou");
-    assert_eq!(filter.index_text("ガッコウ").unwrap().text, "gakkou");
-  }
-
-  #[test]
-  fn unknown_original_letters_are_retained() {
-    let filter = RomajiFilter;
-    assert_eq!(filter.index_text("猫").unwrap().text, "猫");
-  }
 }

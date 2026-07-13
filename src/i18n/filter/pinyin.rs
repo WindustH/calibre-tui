@@ -4,12 +4,12 @@ use anyhow::{Result, anyhow};
 use pinyin::ToPinyin;
 use std::collections::HashMap;
 
-pub struct PinyinFilter {
+pub(super) struct ChinesePinyinTranslator {
   fuzzy_map: Option<HashMap<String, String>>,
 }
 
-impl PinyinFilter {
-  pub fn new(config: &FilterConfig) -> Self {
+impl ChinesePinyinTranslator {
+  pub(super) fn new(config: &FilterConfig) -> Self {
     Self {
       fuzzy_map: config
         .pinyin_fuzzy
@@ -91,7 +91,7 @@ impl PinyinFilter {
   }
 }
 
-impl Translator for PinyinFilter {
+impl Translator for ChinesePinyinTranslator {
   fn index_text(&self, text: &str) -> Result<IndexedText> {
     let mut indexed = String::new();
     let mut token_bounds = vec![0];

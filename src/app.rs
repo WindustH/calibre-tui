@@ -245,11 +245,11 @@ impl App {
       return;
     };
 
-    if self.selected_book_indices.insert(book_index) {
-      self.next_item();
-    } else {
+    if !self.selected_book_indices.insert(book_index) {
       self.selected_book_indices.remove(&book_index);
     }
+
+    self.next_item();
   }
 
   fn select_all_results(&mut self) {

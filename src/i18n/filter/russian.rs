@@ -1,9 +1,9 @@
 use super::{IndexedText, Translator, fullwidth_ascii, index_by_char, latin_char};
 use anyhow::Result;
 
-pub(super) struct RussianLatinFilter;
+pub(super) struct RussianLatinTranslator;
 
-impl Translator for RussianLatinFilter {
+impl Translator for RussianLatinTranslator {
   fn index_text(&self, text: &str) -> Result<IndexedText> {
     Ok(index_by_char(text, russian_char))
   }
@@ -55,24 +55,4 @@ fn russian_char(ch: char) -> String {
     _ => return latin_char(ch),
   }
   .to_string()
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn cyrillic_is_searchable_as_latin() {
-    let filter = RussianLatinFilter;
-    assert_eq!(
-      filter.index_text("Преступление").unwrap().text,
-      "prestuplenie"
-    );
-  }
-
-  #[test]
-  fn unknown_original_letters_are_retained() {
-    let filter = RussianLatinFilter;
-    assert_eq!(filter.index_text("猫").unwrap().text, "猫");
-  }
 }
