@@ -43,6 +43,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.release.outputs.tag }}
+          submodules: recursive
 
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
