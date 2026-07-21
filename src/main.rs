@@ -1,8 +1,12 @@
 mod app;
 mod config;
+mod config_file;
 mod filter;
 mod i18n;
 mod keymap;
+mod layout;
+mod sort;
+mod theme;
 mod ui;
 mod utils;
 
@@ -20,16 +24,16 @@ use std::io;
 #[command(version, about, long_about = None)]
 struct Args {
   #[arg(long)]
-  exit_on_submit: bool,
-  #[arg(long)]
-  print_path: bool,
+  exit_on_open: bool,
 }
 
 fn main() -> Result<()> {
   let args = Args::parse();
   let config = config::load_config().context("failed to load configuration")?;
   let keymap = keymap::load_keymap().context("failed to load keymap")?;
-  let mut app = app::App::new(config, keymap, args.exit_on_submit, args.print_path)?;
+  let layout = layout::load_layout().context("failed to load layout")?;
+  let theme = theme::load_theme().context("failed to load theme")?;
+  let mut app = app::App::new(config, keymap, layout, theme, args.exit_on_open)?;
 
   let mut terminal = setup_terminal()?;
   let result = app.run(&mut terminal);

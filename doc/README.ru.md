@@ -56,21 +56,20 @@ pinyin_fuzzy_groups = [
 `keymap.toml` управляет горячими клавишами:
 
 ```toml
-quit = ["esc", "ctrl-c"]
-submit = ["enter"]
-move_up = ["up"]
-move_down = ["down"]
-page_up = ["pgup"]
-page_down = ["pgdown"]
-jump_start = ["home"]
-jump_end = ["end"]
-toggle_selection = ["tab"]
-select_all = ["ctrl-a"]
-clear_selection = ["ctrl-x"]
-delete_input = ["backspace"]
+[browser]
+keymap = [
+  { on = "esc", run = "quit", desc = "Quit" },
+  { on = "enter", run = "open", desc = "Open selected books" },
+]
+
+[global]
+keymap = [
+  { on = "f1", run = "help", desc = "Show key bindings" },
+  { on = "ctrl-t", run = "command", desc = "Enter command" },
+]
 ```
 
-Имена клавиш поддерживают `enter`, `esc`, `tab`, `backspace`, `up`, `down`, `home`, `end`, `page-up`, `page-down`, одиночные символы и модификаторы вроде `ctrl-a`, `alt-x`, `shift-tab`. Также поддерживаются последовательности, например `jump_start = ["home", "ctrl-g g"]`.
+Актуальные имена клавиш, последовательности и действия описаны в [Keymap](keymap.md).
 
 ### Использование
 
@@ -80,7 +79,12 @@ delete_input = ["backspace"]
 * `Tab`: переключить выбор текущей книги. При выборе курсор переходит на строку ниже.
 * `Ctrl+A`: выбрать все текущие отфильтрованные результаты.
 * `Ctrl+X`: очистить выбор.
+* `Ctrl+P`: вывести выбранные пути в stdout и выйти.
+* `Ctrl+S`, затем клавиша сортировки: применить частую сортировку.
+* `Ctrl+T`: открыть режим команд.
+* `F1`: показать справку по клавишам.
 * `Enter`: открыть выбранные книги. Если ничего не выбрано, открыть книгу под курсором.
 * `Esc` или `Ctrl+C`: выйти.
-* `--exit-on-submit`: выйти после отправки.
-* `--print-path`: вывести пути выбранных книг в stdout вместо открытия.
+* `--exit-on-open`: выйти после открытия книг.
+
+Актуальная подробная документация находится в [doc/index.md](index.md).

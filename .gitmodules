@@ -10,3 +10,6 @@
 [submodule "homebrew-tap"]
 	path = homebrew-tap
 	url = https://github.com/WindustH/homebrew-tap.git
+[submodule "crates/framework-tui"]
+	path = crates/framework-tui
+	url = https://github.com/WindustH/framework-tui.git

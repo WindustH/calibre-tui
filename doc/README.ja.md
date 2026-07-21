@@ -56,21 +56,20 @@ Translator の動作:
 `keymap.toml` でショートカットを変更できます。
 
 ```toml
-quit = ["esc", "ctrl-c"]
-submit = ["enter"]
-move_up = ["up"]
-move_down = ["down"]
-page_up = ["pgup"]
-page_down = ["pgdown"]
-jump_start = ["home"]
-jump_end = ["end"]
-toggle_selection = ["tab"]
-select_all = ["ctrl-a"]
-clear_selection = ["ctrl-x"]
-delete_input = ["backspace"]
+[browser]
+keymap = [
+  { on = "esc", run = "quit", desc = "Quit" },
+  { on = "enter", run = "open", desc = "Open selected books" },
+]
+
+[global]
+keymap = [
+  { on = "f1", run = "help", desc = "Show key bindings" },
+  { on = "ctrl-t", run = "command", desc = "Enter command" },
+]
 ```
 
-キー名は `enter`、`esc`、`tab`、`backspace`、`up`、`down`、`home`、`end`、`page-up`、`page-down`、単一文字、`ctrl-a`、`alt-x`、`shift-tab` などに対応します。`jump_start = ["home", "ctrl-g g"]` のようなキーシーケンスも使えます。
+現在のキー名、キーシーケンス、アクションについては [Keymap](keymap.md) を参照してください。
 
 ### 使い方
 
@@ -80,7 +79,12 @@ delete_input = ["backspace"]
 * `Tab`: 現在の本の選択を切り替えます。選択した場合は次の行へ移動します。
 * `Ctrl+A`: 現在の検索結果をすべて選択。
 * `Ctrl+X`: 選択をすべて解除。
+* `Ctrl+P`: 選択した本のパスを stdout に出力して終了。
+* `Ctrl+S` に続けてソートキー: よく使うソートを適用。
+* `Ctrl+T`: コマンドモードを開く。
+* `F1`: キーバインドヘルプを表示。
 * `Enter`: 選択中の本を開きます。選択がない場合はカーソル上の本を開きます。
 * `Esc` または `Ctrl+C`: 終了。
-* `--exit-on-submit`: 送信後に終了。
-* `--print-path`: 本を開かず、選択した本のパスを stdout に出力。
+* `--exit-on-open`: 本を開いたあと終了。
+
+最新の詳細ドキュメントは [doc/index.md](index.md) を参照してください。

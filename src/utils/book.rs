@@ -6,5 +6,6 @@ pub struct Book {
   pub title: String,
   pub authors: Vec<String>,
   pub series: String,
+  pub formats: Vec<String>,
   pub tags: Vec<String>,
 }

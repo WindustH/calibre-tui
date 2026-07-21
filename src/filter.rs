@@ -1,5 +1,6 @@
 use crate::config::FilterConfig;
 use crate::i18n::filter::{IndexedText, Translators, index_plain_text, normalize_plain_query};
+use crate::layout::{BookField, Layout};
 use crate::utils::book::Book;
 use anyhow::{Result, anyhow};
 
@@ -10,6 +11,7 @@ pub struct BookHighlights {
   pub title: HighlightRanges,
   pub authors: HighlightRanges,
   pub series: HighlightRanges,
+  pub formats: HighlightRanges,
   pub tags: HighlightRanges,
 }
 
@@ -22,6 +24,7 @@ pub struct SearchResult {
 pub struct BookSearch {
   books: Vec<IndexedBook>,
   translators: Translators,
+  search_fields: Vec<BookField>,
 }
 
 struct QueryTerm {
@@ -34,6 +37,7 @@ struct IndexedBook {
   title: IndexedField,
   authors: IndexedField,
   series: IndexedField,
+  formats: IndexedField,
   tags: IndexedField,
 }
 
@@ -43,8 +47,9 @@ struct IndexedField {
 }
 
 impl BookSearch {
-  pub fn new(books: &[Book], config: &FilterConfig) -> Result<Self> {
+  pub fn new(books: &[Book], config: &FilterConfig, layout: &Layout) -> Result<Self> {
     let translators = Translators::from_config(config)?;
+    let search_fields = layout.search_fields().collect::<Vec<_>>();
     let books = books
       .iter()
       .enumerate()
@@ -54,12 +59,17 @@ impl BookSearch {
           title: index_field(&book.title, &translators)?,
           authors: index_field(&book.authors.join(" & "), &translators)?,
           series: index_field(&book.series, &translators)?,
+          formats: index_field(&book.formats.join(", "), &translators)?,
           tags: index_field(&book.tags.join(", "), &translators)?,
         })
       })
       .collect::<Result<Vec<_>>>()?;
 
-    Ok(Self { books, translators })
+    Ok(Self {
+      books,
+      translators,
+      search_fields,
+    })
   }
 
   pub fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
@@ -84,7 +94,7 @@ impl BookSearch {
       let mut all_terms_matched = true;
 
       for term in &terms {
-        match match_book_term(book, term)? {
+        match match_book_term(book, &self.search_fields, term)? {
           Some(term_highlights) => highlights.extend(term_highlights),
           None => {
             all_terms_matched = false;
@@ -120,10 +130,21 @@ impl BookSearch {
 }
 
 impl BookHighlights {
+  pub fn ranges(&self, field: BookField) -> &HighlightRanges {
+    match field {
+      BookField::Title => &self.title,
+      BookField::Authors => &self.authors,
+      BookField::Series => &self.series,
+      BookField::Formats => &self.formats,
+      BookField::Tags => &self.tags,
+    }
+  }
+
   fn is_empty(&self) -> bool {
     self.title.is_empty()
       && self.authors.is_empty()
       && self.series.is_empty()
+      && self.formats.is_empty()
       && self.tags.is_empty()
   }
 
@@ -131,6 +152,7 @@ impl BookHighlights {
     self.title.extend(other.title);
     self.authors.extend(other.authors);
     self.series.extend(other.series);
+    self.formats.extend(other.formats);
     self.tags.extend(other.tags);
   }
 
@@ -138,7 +160,18 @@ impl BookHighlights {
     normalize_ranges(&mut self.title);
     normalize_ranges(&mut self.authors);
     normalize_ranges(&mut self.series);
+    normalize_ranges(&mut self.formats);
     normalize_ranges(&mut self.tags);
+  }
+
+  fn extend_field(&mut self, field: BookField, ranges: HighlightRanges) {
+    match field {
+      BookField::Title => self.title.extend(ranges),
+      BookField::Authors => self.authors.extend(ranges),
+      BookField::Series => self.series.extend(ranges),
+      BookField::Formats => self.formats.extend(ranges),
+      BookField::Tags => self.tags.extend(ranges),
+    }
   }
 }
 
@@ -158,19 +191,36 @@ fn match_field(field: &IndexedField, queries: &[String]) -> Result<Option<Highli
   Ok(None)
 }
 
-fn match_book_term(book: &IndexedBook, term: &QueryTerm) -> Result<Option<BookHighlights>> {
-  let mut highlights = BookHighlights {
-    title: match_field(&book.title, &term.versions)?.unwrap_or_default(),
-    authors: match_field(&book.authors, &term.versions)?.unwrap_or_default(),
-    series: match_field(&book.series, &term.versions)?.unwrap_or_default(),
-    tags: match_field(&book.tags, &term.versions)?.unwrap_or_default(),
-  };
+fn match_book_term(
+  book: &IndexedBook,
+  search_fields: &[BookField],
+  term: &QueryTerm,
+) -> Result<Option<BookHighlights>> {
+  let mut highlights = BookHighlights::default();
+  for field in search_fields {
+    highlights.extend_field(
+      *field,
+      match_field(book.field(*field), &term.versions)?.unwrap_or_default(),
+    );
+  }
 
   if highlights.is_empty() {
     Ok(None)
   } else {
     highlights.normalize();
     Ok(Some(highlights))
+  }
+}
+
+impl IndexedBook {
+  fn field(&self, field: BookField) -> &IndexedField {
+    match field {
+      BookField::Title => &self.title,
+      BookField::Authors => &self.authors,
+      BookField::Series => &self.series,
+      BookField::Formats => &self.formats,
+      BookField::Tags => &self.tags,
+    }
   }
 }
 

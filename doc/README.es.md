@@ -56,21 +56,20 @@ Comportamiento de translators:
 `keymap.toml` controla los atajos:
 
 ```toml
-quit = ["esc", "ctrl-c"]
-submit = ["enter"]
-move_up = ["up"]
-move_down = ["down"]
-page_up = ["pgup"]
-page_down = ["pgdown"]
-jump_start = ["home"]
-jump_end = ["end"]
-toggle_selection = ["tab"]
-select_all = ["ctrl-a"]
-clear_selection = ["ctrl-x"]
-delete_input = ["backspace"]
+[browser]
+keymap = [
+  { on = "esc", run = "quit", desc = "Quit" },
+  { on = "enter", run = "open", desc = "Open selected books" },
+]
+
+[global]
+keymap = [
+  { on = "f1", run = "help", desc = "Show key bindings" },
+  { on = "ctrl-t", run = "command", desc = "Enter command" },
+]
 ```
 
-Los nombres de teclas soportan `enter`, `esc`, `tab`, `backspace`, `up`, `down`, `home`, `end`, `page-up`, `page-down`, caracteres simples y modificadores como `ctrl-a`, `alt-x` o `shift-tab`. También se admiten secuencias como `jump_start = ["home", "ctrl-g g"]`.
+Los nombres de teclas, secuencias y acciones actuales están documentados en [Keymap](keymap.md).
 
 ### Uso
 
@@ -80,7 +79,12 @@ Los nombres de teclas soportan `enter`, `esc`, `tab`, `backspace`, `up`, `down`,
 * `Tab`: alternar la selección del libro actual. Al seleccionarlo, el cursor baja una fila.
 * `Ctrl+A`: seleccionar todos los resultados filtrados.
 * `Ctrl+X`: limpiar la selección.
+* `Ctrl+P`: imprimir las rutas seleccionadas en stdout y salir.
+* `Ctrl+S` seguido de una tecla de ordenación: aplicar una ordenación común.
+* `Ctrl+T`: abrir el modo de comandos.
+* `F1`: mostrar la ayuda de atajos.
 * `Enter`: abrir los libros seleccionados. Si no hay selección, abrir el libro bajo el cursor.
 * `Esc` o `Ctrl+C`: salir.
-* `--exit-on-submit`: salir después de enviar.
-* `--print-path`: imprimir las rutas de libros en stdout sin abrirlos.
+* `--exit-on-open`: salir después de abrir los libros.
+
+La documentación detallada actual está en [doc/index.md](index.md).

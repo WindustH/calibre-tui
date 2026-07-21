@@ -16,6 +16,7 @@ pub fn load_books_from_db(library_path: &Path) -> Result<Vec<Book>> {
             b.path || '/' || (SELECT name FROM data WHERE book = b.id ORDER BY id DESC LIMIT 1) || '.' || lower((SELECT format FROM data WHERE book = b.id ORDER BY id DESC LIMIT 1)) AS relative_path,
             (SELECT GROUP_CONCAT(a.name, '&') FROM authors a JOIN books_authors_link bal ON a.id = bal.author WHERE bal.book = b.id) AS authors,
             s.name AS series,
+            (SELECT GROUP_CONCAT(d.format, ',') FROM data d WHERE d.book = b.id) AS formats,
             (SELECT GROUP_CONCAT(t.name, ',') FROM tags t JOIN books_tags_link btl ON t.id = btl.tag WHERE btl.book = b.id) AS tags
         FROM
             books b
@@ -43,6 +44,13 @@ pub fn load_books_from_db(library_path: &Path) -> Result<Vec<Book>> {
     let series: String = row
       .get::<&str, Option<String>>("series")?
       .unwrap_or_default();
+    let formats: Vec<String> = row
+      .get::<&str, Option<String>>("formats")?
+      .unwrap_or_default()
+      .split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect();
     let tags: Vec<String> = row
       .get::<&str, Option<String>>("tags")?
       .unwrap_or_default()
@@ -64,6 +72,7 @@ pub fn load_books_from_db(library_path: &Path) -> Result<Vec<Book>> {
       title,
       authors,
       series,
+      formats,
       tags,
     };
 

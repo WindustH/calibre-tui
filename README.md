@@ -1,20 +1,38 @@
 # Calibre TUI
 
-A small terminal UI for searching a Calibre library and opening books from the terminal.
+A terminal UI for searching a Calibre library, selecting books, opening them, or printing their paths for shell workflows.
 
 [中文](doc/README.zh-CN.md) | [日本語](doc/README.ja.md) | [Deutsch](doc/README.de.md) | [Français](doc/README.fr.md) | [Español](doc/README.es.md) | [Русский](doc/README.ru.md)
 
 https://github.com/user-attachments/assets/a7d2157c-68bc-468f-a478-57645b414864
 
-### Features
+## Features
 
-* Search by title, author, series, and tags. Space-separated terms are matched with logical AND.
-* Optional translators for Pinyin, Japanese, German, French, Spanish, and Russian search.
-* Multiple translators can be enabled at the same time. Original text search is always enabled.
-* Fixed, compact TUI layout with no UI/theme configuration.
-* Open the selected book directly from the TUI.
+- Search title, authors, series, formats, and tags with AND semantics across space-separated terms.
+- Optional search translators for pinyin, romaji, German/French/Spanish accented Latin folding, and Russian transliteration.
+- Configurable `layout.toml` for visible columns, searchable fields, column order, and width ratios.
+- Configurable `keymap.toml` with multi-key bindings and which-key hints.
+- Command prompt with completions and in-session history.
+- Configurable `theme.toml` for search, command, table, row state, highlight, footer, completion, and help colors.
+- Configurable format-specific opener commands in `config.toml`.
+- Multi-select books, open selected books, or print selected paths and exit with `Ctrl+P`.
 
-### Installation
+## Documentation
+
+Full documentation lives in [doc/index.md](doc/index.md).
+
+- [Quick Start](doc/quick-start.md): install, run, and open books.
+- [Controls](doc/controls.md): default key bindings, mouse behavior, help, and which-key.
+- [Commands](doc/commands.md): command prompt syntax and sort examples.
+- [Configuration](doc/configuration.md): config files, auto-regeneration, and commented defaults.
+- [Layout](doc/layout.md): column visibility, search participation, order, and width ratios.
+- [Keymap](doc/keymap.md): context-aware keymap format and actions.
+- [Theme](doc/theme.md): color syntax and per-component theme fields.
+- [Search](doc/search.md): matching, highlighting, translators, and result ordering.
+- [Troubleshooting](doc/troubleshooting.md): common library, config, terminal, and key issues.
+- [Architecture](doc/architecture.md): module boundaries and dependency notes.
+
+## Installation
 
 Arch Linux AUR:
 
@@ -35,81 +53,55 @@ Homebrew:
 brew install WindustH/tap/calibre-tui
 ```
 
-The Homebrew stable formula downloads a prebuilt release binary. To build the
-latest git version from source:
+The Homebrew stable formula downloads a prebuilt release binary. To build the latest git version from source:
 
 ```bash
 brew install --HEAD WindustH/tap/calibre-tui
 ```
 
-### Build
+## Build
 
 ```bash
 cargo build --release
 ./target/release/calibre-tui
 ```
 
-### Configuration
+## Quick Usage
 
-The config files are stored in `~/.config/calibre-tui/` on Linux. If they do not exist, the app writes default files.
+Default controls:
 
-```toml
-library_path = ""
+- Type to search.
+- `Up` / `Down` or mouse wheel: move focus.
+- `Tab`: toggle selection for the focused book.
+- `Enter`: open selected books, or open the focused book if nothing is selected.
+- `Ctrl+P`: print selected/focused book paths to stdout and quit.
+- `Ctrl+S` followed by a field key: apply a common sort.
+- `Ctrl+T`: open the command prompt.
+- `F1`: show key bindings.
+- `Esc` or `Ctrl+C`: quit.
 
-[filter]
-translators = ["pinyin", "romaji", "german-latin", "french-latin", "spanish-latin", "russian-latin"]
-pinyin_fuzzy = true
-pinyin_fuzzy_groups = [
-    ["on", "ong"],
-    ["an", "ang"],
-    ["en", "eng"],
-    ["in", "ing"]
-]
+Useful command examples:
+
+```text
+sort title asc
+sort authors asc title asc
+sort formats desc title asc
+help
 ```
 
-* `library_path`: Path to your Calibre library. Leave it empty to auto-detect common Calibre locations.
-* `filter.translators`: Search translators to enable. Supported values are `pinyin`, `romaji`, `german-latin`, `french-latin`, `spanish-latin`, and `russian-latin`.
-* `filter.pinyin_fuzzy`: Enables fuzzy Pinyin matching.
-* `filter.pinyin_fuzzy_groups`: Equivalent Pinyin fragments. The first item in each group is the canonical form.
+Use `--exit-on-open` to quit after opening books:
 
-Translator behavior:
-
-* `pinyin`: Chinese Hanzi can be searched by Pinyin, with optional fuzzy groups.
-* `romaji`: Japanese kana can be searched by romaji. Full-width ASCII is normalized. Arbitrary Kanji readings are not inferred without a dictionary, but original text search still works.
-* `german-latin`: Accented Latin characters are folded, with German `ä/ö/ü/ß` matched as `ae/oe/ue/ss`.
-* `french-latin`: Accented Latin characters are folded, so `étranger` can be found by `etranger`.
-* `spanish-latin`: Accented Latin characters are folded, so `niñez` can be found by `ninez`.
-* `russian-latin`: Cyrillic can be searched by Latin transliteration, for example `Преступление` by `prestuplenie`.
-
-`keymap.toml` controls keyboard shortcuts:
-
-```toml
-quit = ["esc", "ctrl-c"]
-submit = ["enter"]
-move_up = ["up"]
-move_down = ["down"]
-page_up = ["pgup"]
-page_down = ["pgdown"]
-jump_start = ["home"]
-jump_end = ["end"]
-toggle_selection = ["tab"]
-select_all = ["ctrl-a"]
-clear_selection = ["ctrl-x"]
-delete_input = ["backspace"]
+```bash
+calibre-tui --exit-on-open
 ```
 
-Key names support common keys like `enter`, `esc`, `tab`, `backspace`, `up`, `down`, `left`, `right`, `home`, `end`, `page-up`, `page-down`, `delete`, `insert`, `space`, single characters, and modifiers such as `ctrl-a`, `alt-x`, or `shift-tab`.
-Bindings can also be key sequences separated by spaces. For example, `jump_start = ["home", "ctrl-g g"]` and `jump_end = ["end", "ctrl-g G"]`.
+## Configuration Files
 
-### Usage
+On Linux, configuration is stored in:
 
-* `Up` / `Down` or mouse scroll: Move the cursor.
-* `PgUp` / `PgDown`: Move by one page.
-* `Home` / `End`: Jump to the first or last filtered result.
-* `Tab`: Toggle multi-selection for the current book.
-* `Ctrl+A`: Select all current filtered results.
-* `Ctrl+X`: Clear all selected books.
-* `Enter`: Open selected books, or the cursor book if nothing is selected.
-* `Esc` or `Ctrl+C`: Quit.
-* `--exit-on-submit`: Quit after submitting books.
-* `--print-path`: Print selected book paths to stdout instead of opening them.
+- `~/.config/calibre-tui/config.toml`
+- `~/.config/calibre-tui/layout.toml`
+- `~/.config/calibre-tui/keymap.toml`
+- `~/.config/calibre-tui/theme.toml`
+
+Files are generated with comments on first run. When newer versions add fields, missing values are filled with defaults and the file is rewritten with comments. Incompatible files are backed up as `*.bak-<timestamp>` and replaced with fresh commented defaults.

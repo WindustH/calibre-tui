@@ -56,21 +56,20 @@ Comportement des translators :
 `keymap.toml` contrôle les raccourcis :
 
 ```toml
-quit = ["esc", "ctrl-c"]
-submit = ["enter"]
-move_up = ["up"]
-move_down = ["down"]
-page_up = ["pgup"]
-page_down = ["pgdown"]
-jump_start = ["home"]
-jump_end = ["end"]
-toggle_selection = ["tab"]
-select_all = ["ctrl-a"]
-clear_selection = ["ctrl-x"]
-delete_input = ["backspace"]
+[browser]
+keymap = [
+  { on = "esc", run = "quit", desc = "Quit" },
+  { on = "enter", run = "open", desc = "Open selected books" },
+]
+
+[global]
+keymap = [
+  { on = "f1", run = "help", desc = "Show key bindings" },
+  { on = "ctrl-t", run = "command", desc = "Enter command" },
+]
 ```
 
-Les noms de touches prennent en charge `enter`, `esc`, `tab`, `backspace`, `up`, `down`, `home`, `end`, `page-up`, `page-down`, les caractères simples et les modificateurs comme `ctrl-a`, `alt-x` ou `shift-tab`. Les séquences comme `jump_start = ["home", "ctrl-g g"]` sont aussi prises en charge.
+Les noms de touches, les séquences et les actions actuels sont décrits dans [Keymap](keymap.md).
 
 ### Utilisation
 
@@ -80,7 +79,12 @@ Les noms de touches prennent en charge `enter`, `esc`, `tab`, `backspace`, `up`,
 * `Tab` : basculer la sélection du livre courant. En sélectionnant, le curseur descend d'une ligne.
 * `Ctrl+A` : sélectionner tous les résultats filtrés.
 * `Ctrl+X` : vider la sélection.
+* `Ctrl+P` : écrire les chemins des livres sélectionnés dans stdout puis quitter.
+* `Ctrl+S` puis une touche de tri : appliquer un tri courant.
+* `Ctrl+T` : ouvrir le mode commande.
+* `F1` : afficher l'aide des raccourcis.
 * `Enter` : ouvrir les livres sélectionnés. Si rien n'est sélectionné, ouvrir le livre sous le curseur.
 * `Esc` ou `Ctrl+C` : quitter.
-* `--exit-on-submit` : quitter après validation.
-* `--print-path` : écrire les chemins des livres dans stdout sans les ouvrir.
+* `--exit-on-open` : quitter après l'ouverture des livres.
+
+La documentation détaillée actuelle se trouve dans [doc/index.md](index.md).

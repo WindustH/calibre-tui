@@ -56,21 +56,20 @@ Translator-Verhalten:
 `keymap.toml` steuert die Tastenkürzel:
 
 ```toml
-quit = ["esc", "ctrl-c"]
-submit = ["enter"]
-move_up = ["up"]
-move_down = ["down"]
-page_up = ["pgup"]
-page_down = ["pgdown"]
-jump_start = ["home"]
-jump_end = ["end"]
-toggle_selection = ["tab"]
-select_all = ["ctrl-a"]
-clear_selection = ["ctrl-x"]
-delete_input = ["backspace"]
+[browser]
+keymap = [
+  { on = "esc", run = "quit", desc = "Quit" },
+  { on = "enter", run = "open", desc = "Open selected books" },
+]
+
+[global]
+keymap = [
+  { on = "f1", run = "help", desc = "Show key bindings" },
+  { on = "ctrl-t", run = "command", desc = "Enter command" },
+]
 ```
 
-Tastennamen unterstützen `enter`, `esc`, `tab`, `backspace`, `up`, `down`, `home`, `end`, `page-up`, `page-down`, Einzelzeichen und Modifier wie `ctrl-a`, `alt-x` oder `shift-tab`. Sequenzen wie `jump_start = ["home", "ctrl-g g"]` sind ebenfalls möglich.
+Aktuelle Tastennamen, Sequenzen und Aktionen stehen in [Keymap](keymap.md).
 
 ### Nutzung
 
@@ -80,7 +79,12 @@ Tastennamen unterstützen `enter`, `esc`, `tab`, `backspace`, `up`, `down`, `hom
 * `Tab`: Auswahl des aktuellen Buchs umschalten. Beim Auswählen springt der Cursor eine Zeile weiter.
 * `Ctrl+A`: Alle aktuellen Suchergebnisse auswählen.
 * `Ctrl+X`: Auswahl leeren.
+* `Ctrl+P`: Ausgewählte Buchpfade nach stdout ausgeben und beenden.
+* `Ctrl+S` gefolgt von einer Sortiertaste: Eine Standardsortierung anwenden.
+* `Ctrl+T`: Befehlsmodus öffnen.
+* `F1`: Tastenhilfe anzeigen.
 * `Enter`: Ausgewählte Bücher öffnen. Wenn nichts ausgewählt ist, wird das Buch unter dem Cursor geöffnet.
 * `Esc` oder `Ctrl+C`: Beenden.
-* `--exit-on-submit`: Nach dem Absenden beenden.
-* `--print-path`: Buchpfade nach stdout ausgeben, ohne die Bücher zu öffnen.
+* `--exit-on-open`: Nach dem Öffnen der Bücher beenden.
+
+Die aktuelle ausführliche Dokumentation steht unter [doc/index.md](index.md).
