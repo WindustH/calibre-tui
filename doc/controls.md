@@ -15,6 +15,7 @@ Default browser controls:
 - `Ctrl+X`: clear selection.
 - `Enter`: open selected books, or the focused book if nothing is selected.
 - `Ctrl+P`: print selected/focused paths to stdout and quit.
+- `Ctrl+Y`: copy selected/focused paths to the system clipboard.
 - `Ctrl+S` plus a follow-up key: apply a common sort.
 - `Ctrl+T`: open the command prompt.
 - `F1`: show key bindings.

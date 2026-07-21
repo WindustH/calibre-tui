@@ -17,9 +17,9 @@ use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::widgets::TableState;
 use std::collections::BTreeSet;
-use std::io::Stdout;
+use std::io::{Stdout, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 const COMMAND_NAMES: &[&str] = &["help", "sort"];
@@ -265,6 +265,7 @@ impl App {
           .collect();
         return Ok(EventAction::Quit);
       }
+      "copy_paths" => self.copy_paths_to_clipboard(),
       "move_up" => self.previous_item(),
       "move_down" => self.next_item(),
       "page_up" => self.page_up(),
@@ -443,6 +444,25 @@ impl App {
     Ok(self.exit_on_open)
   }
 
+  fn copy_paths_to_clipboard(&mut self) {
+    let targets = self.target_book_indices();
+    if targets.is_empty() {
+      self.set_message("no book to copy");
+      return;
+    }
+
+    let text = targets
+      .iter()
+      .map(|book_index| self.books[*book_index].path.display().to_string())
+      .collect::<Vec<_>>()
+      .join("\n");
+
+    match copy_to_clipboard(&text) {
+      Ok(()) => self.set_message(format!("copied {} path(s) to clipboard", targets.len())),
+      Err(error) => self.set_message(format!("failed to copy paths: {error:#}")),
+    }
+  }
+
   fn open_book(&self, book: &Book) -> Result<()> {
     if let Some(command) = opener_command_for_path(&self.open_config, &book.path) {
       open_with_command(command, &book.path)
@@ -568,6 +588,80 @@ fn opener_command_for_path<'a>(open_config: &'a OpenConfig, path: &Path) -> Opti
 
 fn normalize_format_key(format: &str) -> String {
   format.trim().trim_start_matches('.').to_ascii_lowercase()
+}
+
+fn copy_to_clipboard(text: &str) -> Result<()> {
+  let candidates = clipboard_commands();
+  let mut errors = Vec::new();
+
+  for (program, args) in candidates {
+    match run_clipboard_command(program, args, text) {
+      Ok(()) => return Ok(()),
+      Err(error) => errors.push(format!("{program}: {error:#}")),
+    }
+  }
+
+  anyhow::bail!(
+    "no clipboard command succeeded{}",
+    if errors.is_empty() {
+      String::new()
+    } else {
+      format!(" ({})", errors.join("; "))
+    }
+  )
+}
+
+fn clipboard_commands() -> Vec<(&'static str, Vec<&'static str>)> {
+  #[cfg(target_os = "macos")]
+  {
+    return vec![("pbcopy", vec![])];
+  }
+
+  #[cfg(target_os = "windows")]
+  {
+    return vec![("clip", vec![])];
+  }
+
+  #[cfg(all(unix, not(target_os = "macos")))]
+  {
+    let mut commands = Vec::new();
+    if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+      commands.push(("wl-copy", vec![]));
+    }
+    if std::env::var_os("DISPLAY").is_some() {
+      commands.push(("xclip", vec!["-selection", "clipboard"]));
+      commands.push(("xsel", vec!["--clipboard", "--input"]));
+    }
+    commands.push(("wl-copy", vec![]));
+    commands.push(("xclip", vec!["-selection", "clipboard"]));
+    commands.push(("xsel", vec!["--clipboard", "--input"]));
+    commands
+  }
+}
+
+fn run_clipboard_command(program: &str, args: Vec<&str>, text: &str) -> Result<()> {
+  let mut child = Command::new(program)
+    .args(args)
+    .stdin(Stdio::piped())
+    .spawn()
+    .with_context(|| "failed to start command")?;
+
+  let Some(mut stdin) = child.stdin.take() else {
+    anyhow::bail!("failed to open command stdin");
+  };
+  stdin
+    .write_all(text.as_bytes())
+    .with_context(|| "failed to write clipboard data")?;
+  drop(stdin);
+
+  let status = child
+    .wait()
+    .with_context(|| "failed to wait for clipboard command")?;
+  if !status.success() {
+    anyhow::bail!("command exited with {status}");
+  }
+
+  Ok(())
 }
 
 fn open_with_command(command: &[String], path: &Path) -> Result<()> {

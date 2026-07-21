@@ -55,6 +55,7 @@ impl Default for KeymapConfig {
           key("ctrl-x", "clear_selection", "Clear selection"),
           key("backspace", "delete_input", "Delete search input"),
           key("ctrl-p", "print_paths", "Print selected paths and quit"),
+          key("ctrl-y", "copy_paths", "Copy selected paths"),
           key(["ctrl-s", "t"], "sort title asc", "Sort title ascending"),
           key(["ctrl-s", "T"], "sort title desc", "Sort title descending"),
           key(

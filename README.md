@@ -75,6 +75,7 @@ Default controls:
 - `Tab`: toggle selection for the focused book.
 - `Enter`: open selected books, or open the focused book if nothing is selected.
 - `Ctrl+P`: print selected/focused book paths to stdout and quit.
+- `Ctrl+Y`: copy selected/focused book paths to the system clipboard.
 - `Ctrl+S` followed by a field key: apply a common sort.
 - `Ctrl+T`: open the command prompt.
 - `F1`: show key bindings.

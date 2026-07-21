@@ -59,6 +59,7 @@ Common browser actions:
 - `quit`
 - `open`
 - `print_paths`
+- `copy_paths`
 - `move_up`, `move_down`
 - `page_up`, `page_down`
 - `jump_start`, `jump_end`
@@ -90,6 +91,7 @@ Important defaults:
 - `Esc`, `Ctrl+C`: quit
 - `Enter`: open selected/focused books
 - `Ctrl+P`: print paths and quit
+- `Ctrl+Y`: copy paths to the system clipboard
 - `Ctrl+T`: command prompt
 - `F1`: key binding help
 - `Ctrl+S` followed by a field key: common sorts
