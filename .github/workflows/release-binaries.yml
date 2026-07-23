@@ -63,7 +63,8 @@ jobs:
 
       - name: Build
         env:
-          VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
+          VCPKG_ROOT: "C:\\vcpkg"
+          VCPKGRS_TRIPLET: x64-windows-static-md
         run: cargo build --release --locked --target ${{ matrix.target }}
 
       - name: Package
