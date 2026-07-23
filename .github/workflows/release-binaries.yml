@@ -53,10 +53,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev
 
+      - name: Install Windows build dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: vcpkg install sqlite3:x64-windows-static-md
+
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
 
       - name: Build
+        env:
+          VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
         run: cargo build --release --locked --target ${{ matrix.target }}
 
       - name: Package
