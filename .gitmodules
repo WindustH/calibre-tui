@@ -1,15 +1,3 @@
-[submodule "pkgbuild/release"]
-	path = pkgbuild/release
-	url = https://aur.archlinux.org/calibre-tui.git
-[submodule "pkgbuild/git"]
-	path = pkgbuild/git
-	url = https://aur.archlinux.org/calibre-tui-git.git
-[submodule "pkgbuild/bin"]
-	path = pkgbuild/bin
-	url = https://aur.archlinux.org/calibre-tui-bin.git
-[submodule "homebrew-tap"]
-	path = homebrew-tap
-	url = https://github.com/WindustH/homebrew-tap.git
 [submodule "crates/framework-tui"]
 	path = crates/framework-tui
 	url = https://github.com/WindustH/framework-tui.git
