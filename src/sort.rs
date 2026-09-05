@@ -49,10 +49,7 @@ impl SortSpec {
       let direction = args
         .get(index)
         .and_then(|value| SortDirection::parse(value))
-        .map(|direction| {
-          index += 1;
-          direction
-        })
+        .inspect(|_| index += 1)
         .unwrap_or(SortDirection::Asc);
 
       keys.push(SortKey { field, direction });

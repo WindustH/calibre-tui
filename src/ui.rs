@@ -34,6 +34,21 @@ pub struct DrawState<'a> {
   pub sort_label: &'a str,
 }
 
+struct InputBoxContext<'a> {
+  input: &'a str,
+  selected_count: usize,
+  prompt: Option<&'a Prompt>,
+  command_completion: Option<&'a CommandCompletion>,
+  sort_label: &'a str,
+}
+
+struct TableContext<'a> {
+  books: &'a [Book],
+  results: &'a [SearchResult],
+  table_state: &'a mut TableState,
+  selected_book_indices: &'a BTreeSet<usize>,
+}
+
 pub fn draw(frame: &mut Frame, area: Rect, state: DrawState<'_>) {
   let DrawState {
     input,
@@ -87,20 +102,24 @@ pub fn draw(frame: &mut Frame, area: Rect, state: DrawState<'_>) {
   draw_input_box(
     frame,
     chunks[0],
-    input,
-    selected_book_indices.len(),
     theme,
-    prompt,
-    command_completion,
-    sort_label,
+    &InputBoxContext {
+      input,
+      selected_count: selected_book_indices.len(),
+      prompt,
+      command_completion,
+      sort_label,
+    },
   );
   draw_table(
     frame,
     chunks[2],
-    books,
-    results,
-    table_state,
-    selected_book_indices,
+    TableContext {
+      books,
+      results,
+      table_state,
+      selected_book_indices,
+    },
     layout,
     theme,
   );
@@ -112,16 +131,14 @@ pub fn draw(frame: &mut Frame, area: Rect, state: DrawState<'_>) {
   }
 }
 
-fn draw_input_box(
-  frame: &mut Frame,
-  area: Rect,
-  input: &str,
-  selected_count: usize,
-  theme: &Theme,
-  prompt: Option<&Prompt>,
-  command_completion: Option<&CommandCompletion>,
-  sort_label: &str,
-) {
+fn draw_input_box(frame: &mut Frame, area: Rect, theme: &Theme, context: &InputBoxContext<'_>) {
+  let InputBoxContext {
+    input,
+    selected_count,
+    prompt,
+    command_completion,
+    sort_label,
+  } = *context;
   if let Some(prompt) = prompt {
     draw_command_input(frame, area, prompt, command_completion, theme);
     return;
@@ -275,13 +292,16 @@ fn draw_key_help(
 fn draw_table(
   frame: &mut Frame,
   area: Rect,
-  books: &[Book],
-  results: &[SearchResult],
-  table_state: &mut TableState,
-  selected_book_indices: &BTreeSet<usize>,
+  context: TableContext<'_>,
   layout: &Layout,
   theme: &Theme,
 ) {
+  let TableContext {
+    books,
+    results,
+    table_state,
+    selected_book_indices,
+  } = context;
   let columns = layout.visible_columns().collect::<Vec<_>>();
   let header = Row::new(columns.iter().map(|column| {
     Cell::from(column.label.clone()).style(

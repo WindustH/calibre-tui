@@ -17,7 +17,7 @@ pub struct Config {
   pub filter: FilterConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(default)]
 pub struct OpenConfig {
@@ -52,14 +52,6 @@ impl Default for Config {
       library_path: find_calibre_library().unwrap_or_default(),
       open: OpenConfig::default(),
       filter: FilterConfig::default(),
-    }
-  }
-}
-
-impl Default for OpenConfig {
-  fn default() -> Self {
-    Self {
-      commands: BTreeMap::new(),
     }
   }
 }

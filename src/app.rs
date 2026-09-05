@@ -126,10 +126,11 @@ impl App {
   fn draw(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
     terminal.draw(|frame| {
       self.page_size = usize::from(frame.area().height.saturating_sub(8)).max(1);
-      let key_help_entries = self
-        .key_help
-        .then(|| self.key_help_entries())
-        .unwrap_or_default();
+      let key_help_entries = if self.key_help {
+        self.key_help_entries()
+      } else {
+        Vec::new()
+      };
       ui::draw(
         frame,
         frame.area(),
