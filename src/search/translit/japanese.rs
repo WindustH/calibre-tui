@@ -1,17 +1,14 @@
-use super::{
-  IndexedText, Translator, ascii_search_text, fullwidth_ascii, latin_char, translated_search_text,
-};
-use anyhow::Result;
+use super::{IndexedText, Translator, latin_char, push_search_text};
 
 pub(super) struct JapaneseRomajiTranslator;
 
 impl Translator for JapaneseRomajiTranslator {
-  fn index_text(&self, text: &str) -> Result<IndexedText> {
-    Ok(index_japanese_text(text))
+  fn index_text(&self, text: &str) -> IndexedText {
+    index_japanese_text(text)
   }
 
-  fn normalize_query(&self, query: &str) -> Result<String> {
-    Ok(index_japanese_text(query).text)
+  fn normalize_query(&self, query: &str) -> String {
+    index_japanese_text(query).into_text()
   }
 }
 
@@ -20,67 +17,47 @@ fn index_japanese_text(text: &str) -> IndexedText {
     .chars()
     .filter(|ch| !ch.is_whitespace())
     .collect::<Vec<_>>();
-  let mut parts = vec![String::new(); chars.len()];
+  let mut indexed = IndexedText::default();
+  let mut romaji = String::new();
   let mut previous_vowel = None;
 
   for (index, &ch) in chars.iter().enumerate() {
+    let token_start = indexed.text.len();
+    let out = &mut indexed.text;
+    let next = chars.get(index + 1).copied();
+
     if is_sokuon(ch) {
+      // っ doubles the next consonant: っか -> kka.
       if let Some(next) = japanese_unit_romaji(&chars, index + 1)
-        && let Some(consonant) = first_consonant(next.as_str())
+        && let Some(consonant) = first_consonant(&next)
       {
-        parts[index].push(consonant);
+        out.push(consonant);
       }
-      previous_vowel = last_vowel(&parts[index]).or(previous_vowel);
-      continue;
-    }
-
-    if is_small_y(ch) && index > 0 && digraph_prefix(chars[index - 1]).is_some() {
-      let vowel = small_y_vowel(ch).unwrap_or_default();
-      parts[index].push_str(vowel);
-      previous_vowel = last_vowel(&parts[index]).or(previous_vowel);
-      continue;
-    }
-
-    if ch == 'ー' {
-      if let Some(vowel) = previous_vowel {
-        parts[index].push(vowel);
-      }
-      continue;
-    }
-
-    let mut romaji = japanese_char(ch);
-    if let Some(next) = chars.get(index + 1).copied()
-      && let (Some(prefix), Some(_vowel)) = (digraph_prefix(ch), small_y_vowel(next))
+    } else if is_small_y(ch) && index > 0 && digraph_prefix(chars[index - 1]).is_some() {
+      // The small ゃ/ゅ/ょ of a digraph: きゃ -> ky + a.
+      out.push_str(small_y_vowel(ch).unwrap_or_default());
+    } else if ch == 'ー' {
+      // The long vowel mark repeats the previous vowel.
+      out.extend(previous_vowel);
+    } else if let Some(prefix) = digraph_prefix(ch)
+      && next.and_then(small_y_vowel).is_some()
     {
-      romaji = prefix.to_string();
-      parts[index].push_str(&ascii_search_text(&romaji));
-      previous_vowel = last_vowel(&parts[index]).or(previous_vowel);
-      continue;
+      out.push_str(prefix);
+    } else {
+      romaji.clear();
+      japanese_char(ch, &mut romaji);
+      push_search_text(out, ch, &romaji);
     }
 
-    parts[index].push_str(&translated_search_text(ch, &romaji));
-    previous_vowel = last_vowel(&parts[index]).or(previous_vowel);
+    previous_vowel = last_vowel(&indexed.text[token_start..]).or(previous_vowel);
+    indexed.token_ends.push(indexed.text.len());
   }
 
-  let mut indexed = String::new();
-  let mut token_bounds = vec![0];
-  for part in parts {
-    indexed.push_str(&part);
-    token_bounds.push(indexed.chars().count());
-  }
-
-  IndexedText {
-    text: indexed,
-    token_bounds,
-  }
+  indexed
 }
 
-fn japanese_char(ch: char) -> String {
-  if let Some(converted) = fullwidth_ascii(ch) {
-    return converted.to_string();
-  }
-
-  match ch {
+fn japanese_char(ch: char, out: &mut String) {
+  let romaji = match ch {
     'あ' | 'ア' | 'ぁ' | 'ァ' => "a",
     'い' | 'イ' | 'ぃ' | 'ィ' => "i",
     'う' | 'ウ' | 'ぅ' | 'ゥ' => "u",
@@ -153,9 +130,9 @@ fn japanese_char(ch: char) -> String {
     'ぺ' | 'ペ' => "pe",
     'ぽ' | 'ポ' => "po",
     'ゔ' | 'ヴ' => "vu",
-    _ => return latin_char(ch),
-  }
-  .to_string()
+    _ => return latin_char(ch, out),
+  };
+  out.push_str(romaji);
 }
 
 fn japanese_unit_romaji(chars: &[char], index: usize) -> Option<String> {
@@ -165,7 +142,9 @@ fn japanese_unit_romaji(chars: &[char], index: usize) -> Option<String> {
   {
     return Some(format!("{prefix}{vowel}"));
   }
-  Some(japanese_char(ch))
+  let mut romaji = String::new();
+  japanese_char(ch, &mut romaji);
+  Some(romaji)
 }
 
 fn digraph_prefix(ch: char) -> Option<&'static str> {

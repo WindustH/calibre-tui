@@ -1,6 +1,6 @@
 # Calibre TUI
 
-A terminal UI for searching a Calibre library, selecting books, opening them, or printing their paths for shell workflows.
+A terminal UI for searching your Calibre library, then opening books or printing their paths for shell scripts.
 
 [中文](doc/README.zh-CN.md) | [日本語](doc/README.ja.md) | [Deutsch](doc/README.de.md) | [Français](doc/README.fr.md) | [Español](doc/README.es.md) | [Русский](doc/README.ru.md)
 
@@ -8,101 +8,82 @@ https://github.com/user-attachments/assets/7e741b94-80e0-4c61-8479-57e963c01d3e
 
 ## Features
 
-- Search title, authors, series, formats, and tags with AND semantics across space-separated terms.
-- Optional search translators for pinyin, romaji, German/French/Spanish accented Latin folding, and Russian transliteration.
-- Configurable `layout.toml` for visible columns, searchable fields, column order, and width ratios.
-- Configurable `keymap.toml` with multi-key bindings and which-key hints.
-- Command prompt with completions and in-session history.
-- Configurable `theme.toml` for search, command, table, row state, highlight, footer, completion, and help colors.
-- Configurable format-specific opener commands in `config.toml`.
-- Multi-select books, open selected books, or print selected paths and exit with `Ctrl+P`.
-
-## Documentation
-
-Full documentation lives in [doc/index.md](doc/index.md).
-
-- [Quick Start](doc/quick-start.md): install, run, and open books.
-- [Controls](doc/controls.md): default key bindings, mouse behavior, help, and which-key.
-- [Commands](doc/commands.md): command prompt syntax and sort examples.
-- [Configuration](doc/configuration.md): config files, auto-regeneration, and commented defaults.
-- [Layout](doc/layout.md): column visibility, search participation, order, and width ratios.
-- [Keymap](doc/keymap.md): context-aware keymap format and actions.
-- [Theme](doc/theme.md): color syntax and per-component theme fields.
-- [Search](doc/search.md): matching, highlighting, translators, and result ordering.
-- [Troubleshooting](doc/troubleshooting.md): common library, config, terminal, and key issues.
-- [Architecture](doc/architecture.md): module boundaries and dependency notes.
+- Instant search as you type across title, authors, series, formats, and tags. Space-separated terms must all match.
+- Search other scripts from a Latin keyboard: Chinese by pinyin (on by default), Japanese kana by romaji, Russian by transliteration, and German, French, or Spanish without accents.
+- Select several books, open them, copy their paths, or print the paths and exit for use in shell pipelines.
+- Choose an opener per format, such as `zathura` for PDF, or fall back to the system default.
+- Sort by any field with `Ctrl+S` shortcuts or the `sort` command.
+- Customize columns, key bindings (including multi-key sequences with hints), and colors in commented TOML files.
+- Works while Calibre is running; the library is only ever read.
 
 ## Installation
 
-Arch Linux AUR:
+Arch Linux (AUR):
 
 ```bash
-yay -S calibre-tui-bin
-```
-
-Alternative AUR packages:
-
-```bash
-yay -S calibre-tui      # build the latest stable release from source
-yay -S calibre-tui-git  # build the latest git version from source
+yay -S calibre-tui-bin   # prebuilt binary
+yay -S calibre-tui       # latest release, built from source
+yay -S calibre-tui-git   # latest git version, built from source
 ```
 
 Homebrew:
 
 ```bash
-brew install WindustH/tap/calibre-tui
+brew install WindustH/tap/calibre-tui          # prebuilt binary
+brew install --HEAD WindustH/tap/calibre-tui   # latest git version
 ```
 
-The Homebrew stable formula downloads a prebuilt release binary. To build the latest git version from source:
+Prebuilt binaries for Linux (x86_64), macOS (Apple Silicon), and Windows (x86_64) are attached to each GitHub release.
+
+To build from source you need Rust and, on Linux, the SQLite development package (for example `libsqlite3-dev`):
 
 ```bash
-brew install --HEAD WindustH/tap/calibre-tui
-```
-
-## Build
-
-```bash
+git clone --recursive https://github.com/WindustH/calibre-tui.git
+cd calibre-tui
 cargo build --release
 ./target/release/calibre-tui
 ```
 
-## Quick Usage
+## Usage
 
-Default controls:
+Run `calibre-tui`. It finds your Calibre library automatically; if it can't, set `library_path` in `config.toml`.
 
-- Type to search.
-- `Up` / `Down` or mouse wheel: move focus.
-- `Tab`: toggle selection for the focused book.
-- `Enter`: open selected books, or open the focused book if nothing is selected.
-- `Ctrl+P`: print selected/focused book paths to stdout and quit.
-- `Ctrl+Y`: copy selected/focused book paths to the system clipboard.
-- `Ctrl+S` followed by a field key: apply a common sort.
-- `Ctrl+T`: open the command prompt.
-- `F1`: show key bindings.
+- Type to search; `Backspace` deletes.
+- `Up` / `Down` or the mouse wheel: move; `PgUp` / `PgDn`, `Home` / `End`: jump.
+- `Tab`: select or unselect the focused book. `Ctrl+A` selects all results, `Ctrl+X` clears.
+- `Enter`: open the selected books, or the focused one if none are selected.
+- `Ctrl+Y`: copy their paths to the clipboard.
+- `Ctrl+P`: print their paths and quit.
+- `Ctrl+S`, then a letter: sort (`t` title, `a` authors, `s` series, `f` formats, `g` tags; uppercase for descending).
+- `Ctrl+T`: command prompt, for example `sort authors asc title desc`.
+- `F1`: show all key bindings.
 - `Esc` or `Ctrl+C`: quit.
 
-Useful command examples:
+Pass `--exit-on-open` to quit after opening books.
 
-```text
-sort title asc
-sort authors asc title asc
-sort formats desc title asc
-help
-```
-
-Use `--exit-on-open` to quit after opening books:
+Printed paths go to stdout, one per line, while the interface stays on the terminal, so you can use them in scripts:
 
 ```bash
-calibre-tui --exit-on-open
+zathura "$(calibre-tui)"                    # open one book
+calibre-tui | xargs -d '\n' -r cp -t ~/usb  # copy the selected books (GNU xargs)
 ```
 
-## Configuration Files
+## Configuration
 
-On Linux, configuration is stored in:
+Four files are created with commented defaults on first run:
 
-- `~/.config/calibre-tui/config.toml`
-- `~/.config/calibre-tui/layout.toml`
-- `~/.config/calibre-tui/keymap.toml`
-- `~/.config/calibre-tui/theme.toml`
+- `config.toml`: library path, per-format openers, search translators
+- `layout.toml`: columns, their order and widths, and which fields are searched
+- `keymap.toml`: key bindings
+- `theme.toml`: colors
 
-Files are generated with comments on first run. When newer versions add fields, missing values are filled with defaults and the file is rewritten with comments. Incompatible files are backed up as `*.bak-<timestamp>` and replaced with fresh commented defaults.
+They live in `~/.config/calibre-tui/` on Linux, `~/Library/Application Support/calibre-tui/` on macOS, and `%APPDATA%\calibre-tui\` on Windows. When an update adds settings, they are filled in with defaults. A file that can no longer be read is saved as `<name>.bak-<timestamp>` and replaced with defaults.
+
+## Documentation
+
+- [Quick Start](doc/quick-start.md)
+- [Controls](doc/controls.md) and [Commands](doc/commands.md)
+- [Search](doc/search.md)
+- [Configuration](doc/configuration.md), [Layout](doc/layout.md), [Keymap](doc/keymap.md), [Theme](doc/theme.md)
+- [Troubleshooting](doc/troubleshooting.md)
+- [Architecture](doc/architecture.md), for contributors

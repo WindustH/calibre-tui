@@ -1,6 +1,5 @@
-use crate::filter::SearchResult;
-use crate::layout::{BookField, Layout};
-use crate::utils::book::Book;
+use crate::library::{Book, BookField};
+use crate::search::SearchResult;
 use anyhow::{Result, bail};
 use std::cmp::Ordering;
 
@@ -19,6 +18,13 @@ pub struct SortKey {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SortSpec {
   keys: Vec<SortKey>,
+}
+
+/// A sort spec resolved against the library: every book's position in the
+/// fully sorted library, so results sort by integer comparison.
+pub struct BookOrder {
+  spec: SortSpec,
+  positions: Vec<usize>,
 }
 
 impl Default for SortSpec {
@@ -69,7 +75,7 @@ impl SortSpec {
 }
 
 impl SortDirection {
-  fn parse(input: &str) -> Option<Self> {
+  pub fn parse(input: &str) -> Option<Self> {
     match input.to_ascii_lowercase().as_str() {
       "asc" | "ascending" => Some(Self::Asc),
       "desc" | "descending" => Some(Self::Desc),
@@ -85,67 +91,115 @@ impl SortDirection {
   }
 }
 
-pub fn sort_results(
-  results: &mut [SearchResult],
-  books: &[Book],
-  spec: &SortSpec,
-  layout: &Layout,
-) {
-  let match_fields = layout.search_fields().collect::<Vec<_>>();
-  results.sort_by(|left, right| {
-    compare_match_priority(left, right, &match_fields)
-      .then_with(|| compare_results(left, right, books, spec))
-  });
+impl BookOrder {
+  /// Sort the whole library by the spec's keys (ASCII case-insensitive),
+  /// breaking ties by library order.
+  pub fn new(spec: SortSpec, books: &[Book]) -> Self {
+    let keys = spec
+      .keys
+      .iter()
+      .map(|key| {
+        let values = books
+          .iter()
+          .map(|book| book.field_text(key.field).to_ascii_lowercase())
+          .collect::<Vec<_>>();
+        (values, key.direction)
+      })
+      .collect::<Vec<_>>();
+
+    let mut order = (0..books.len()).collect::<Vec<_>>();
+    order.sort_by(|&left, &right| {
+      keys
+        .iter()
+        .map(|(values, direction)| {
+          let ordering = values[left].cmp(&values[right]);
+          match direction {
+            SortDirection::Asc => ordering,
+            SortDirection::Desc => ordering.reverse(),
+          }
+        })
+        .find(|ordering| ordering.is_ne())
+        .unwrap_or(Ordering::Equal)
+    });
+
+    let mut positions = vec![0; books.len()];
+    for (position, book_index) in order.into_iter().enumerate() {
+      positions[book_index] = position;
+    }
+    Self { spec, positions }
+  }
+
+  pub fn spec(&self) -> &SortSpec {
+    &self.spec
+  }
+
+  /// Group results by match rank (layout field priority), then order each
+  /// group by the sort spec.
+  pub fn sort(&self, results: &mut [SearchResult]) {
+    results.sort_unstable_by_key(|result| (result.rank, self.positions[result.book_index]));
+  }
 }
 
-fn compare_match_priority(
-  left: &SearchResult,
-  right: &SearchResult,
-  match_fields: &[BookField],
-) -> Ordering {
-  match_priority(left, match_fields).cmp(&match_priority(right, match_fields))
-}
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::search::Highlights;
 
-fn match_priority(result: &SearchResult, match_fields: &[BookField]) -> usize {
-  match_fields
-    .iter()
-    .position(|field| !result.highlights.ranges(*field).is_empty())
-    .unwrap_or(match_fields.len())
-}
-
-fn compare_results(
-  left: &SearchResult,
-  right: &SearchResult,
-  books: &[Book],
-  spec: &SortSpec,
-) -> Ordering {
-  let Some(left_book) = books.get(left.book_index) else {
-    return left.book_index.cmp(&right.book_index);
-  };
-  let Some(right_book) = books.get(right.book_index) else {
-    return left.book_index.cmp(&right.book_index);
-  };
-
-  for key in &spec.keys {
-    let ordering = field_value(left_book, key.field).cmp(&field_value(right_book, key.field));
-    let ordering = match key.direction {
-      SortDirection::Asc => ordering,
-      SortDirection::Desc => ordering.reverse(),
-    };
-    if !ordering.is_eq() {
-      return ordering;
+  fn book(title: &str, author: &str) -> Book {
+    Book {
+      title: title.to_string(),
+      authors: vec![author.to_string()],
+      ..Book::default()
     }
   }
 
-  left.book_index.cmp(&right.book_index)
-}
+  fn result(book_index: usize, rank: usize) -> SearchResult {
+    SearchResult {
+      book_index,
+      rank,
+      highlights: Highlights::default(),
+    }
+  }
 
-fn field_value(book: &Book, field: BookField) -> String {
-  match field {
-    BookField::Title => book.title.to_ascii_lowercase(),
-    BookField::Authors => book.authors.join(" & ").to_ascii_lowercase(),
-    BookField::Series => book.series.to_ascii_lowercase(),
-    BookField::Formats => book.formats.join(", ").to_ascii_lowercase(),
-    BookField::Tags => book.tags.join(", ").to_ascii_lowercase(),
+  fn sorted(order: &BookOrder, mut results: Vec<SearchResult>) -> Vec<usize> {
+    order.sort(&mut results);
+    results.iter().map(|result| result.book_index).collect()
+  }
+
+  #[test]
+  fn sorts_by_keys_then_library_order() {
+    let books = [
+      book("b", "Y"),
+      book("A", "Z"),
+      book("a", "X"),
+      book("c", "X"),
+    ];
+    let all = || (0..books.len()).map(|index| result(index, 0)).collect();
+
+    let order = BookOrder::new(SortSpec::default(), &books);
+    assert_eq!(sorted(&order, all()), [1, 2, 0, 3]);
+
+    let spec = SortSpec::parse(&["authors", "title", "desc"]).unwrap();
+    assert_eq!(spec.label(), "authors asc, title desc");
+    let order = BookOrder::new(spec, &books);
+    assert_eq!(sorted(&order, all()), [3, 2, 0, 1]);
+  }
+
+  #[test]
+  fn match_rank_groups_before_sort_keys() {
+    let books = [book("a", ""), book("b", ""), book("c", "")];
+    let order = BookOrder::new(SortSpec::default(), &books);
+    let results = vec![result(0, 1), result(2, 0), result(1, 0)];
+    assert_eq!(sorted(&order, results), [1, 2, 0]);
+  }
+
+  #[test]
+  fn parse_rejects_unknown_fields_and_empty_args() {
+    assert!(SortSpec::parse(&[]).is_err());
+    assert!(SortSpec::parse(&["rating"]).is_err());
+    assert_eq!(
+      SortSpec::parse(&["Title", "DESCENDING"]).unwrap().label(),
+      "title desc"
+    );
   }
 }

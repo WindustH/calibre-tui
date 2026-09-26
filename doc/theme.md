@@ -1,71 +1,49 @@
 # Theme
 
-`theme.toml` controls colors for the main TUI components.
-
-Default location:
-
-- `~/.config/calibre-tui/theme.toml`
-
-The file is generated with comments. The TOML is serialized by the `toml` crate and comments are inserted afterward, so existing values are preserved when missing fields are filled.
+`theme.toml` sets the interface colors. It is in the [configuration directory](configuration.md) and is created with the defaults and comments.
 
 ## Color Values
 
-Supported color values:
+- `reset`: the terminal's default color
+- Named colors: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `gray`, `dark_gray`, and `light_red`, `light_green`, `light_yellow`, `light_blue`, `light_magenta`, `light_cyan`. Spellings like `darkgray`, `dark_grey`, and `lightcyan` also work.
+- `ansi:<0-255>`: a 256-color palette index, for example `ansi:236`
+- `#rrggbb`: an RGB color, for example `#ffaa00`
 
-- `reset`
-- `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`
-- `gray`, `dark_gray`
-- `light_red`, `light_green`, `light_yellow`, `light_blue`, `light_magenta`, `light_cyan`
-- compact aliases such as `darkgray` and `lightcyan`
-- indexed colors such as `ansi:236`
-- RGB colors such as `#ffaa00`
+Values are case-insensitive. An unrecognized value falls back to `reset`.
 
-Invalid color names fall back to `reset`.
+## Fields
 
-## Sections
+Fields with the same name mean the same thing in every section: `border` is a box border, `title` a box title, `text` typed text.
 
-Top-level fields:
+| Section | Fields | Colors for |
+| --- | --- | --- |
+| top level | `foreground`, `background` | Default text and the screen background |
+| top level | `accent`, `muted` | Reserved; currently unused |
+| `[search]` | `border`, `title`, `text` | The search box |
+| `[command]` | `border`, `title`, `text`, `prefix`, `suggestion` | The command prompt; `prefix` is the `:` and `suggestion` the inline completion |
+| `[table]` | `border`, `title`, `header` | The book list frame and column headers |
+| `[table]` | `title_field`, `authors_field`, `series_field`, `formats_field`, `tags_field` | Text of each column in unselected, unfocused rows |
+| `[row]` | `hover_foreground`, `hover_background` | The focused row |
+| `[row]` | `selected_foreground`, `selected_background` | Selected rows |
+| `[row]` | `selected_hover_foreground`, `selected_hover_background` | A row that is both selected and focused |
+| `[highlight]` | `normal`, `hover`, `selected`, `selected_hover` | Search matches (bold) in each of those row states |
+| `[footer]` | `message` | Status messages |
+| `[footer]` | `which_key_background`, `which_key_foreground`, `which_key_key`, `which_key_separator`, `which_key_description` | Which-key hints for pending key sequences |
+| `[footer]` | `which_key_separator_text`, `which_key_columns` | Text between a key and its description, and the preferred number of hint columns (fewer on narrow terminals) |
+| `[completion]` | `foreground`, `background`, `selected_foreground`, `selected_background` | The command completion list |
+| `[help]` | `background`, `border`, `key`, `description`, `muted` | The `F1` key binding popup; `muted` is its closing hint |
 
-- `foreground`: base foreground
-- `background`: base background
-- `accent`: primary emphasis color
-- `muted`: secondary text color
+## Example
 
-Component sections:
-
-- `[search]`: search input box
-- `[command]`: command prompt box and inline suggestions
-- `[table]`: book list frame, header, and per-field text colors
-- `[row]`: hover, selection, and selected-hover row states
-- `[highlight]`: search match highlight colors by row state
-- `[footer]`: messages and which-key hints
-- `[completion]`: command completion list
-- `[help]`: F1 help popup
-
-Similar field names have the same meaning across sections. For example, `border` means a component border color, and `title` means a component title color.
-
-## Completion Selection
-
-The selected completion background defaults to `blue` so it visually matches the normal hovered-row behavior:
+A darker focused row with an orange match highlight:
 
 ```toml
-[completion]
-foreground = "white"
-background = "reset"
-selected_foreground = "black"
-selected_background = "blue"
+[row]
+hover_foreground = "white"
+hover_background = "ansi:238"
+
+[highlight]
+hover = "#ffaa00"
 ```
 
-## Which-Key
-
-Which-key hints use fields under `[footer]`:
-
-- `which_key_background`
-- `which_key_foreground`
-- `which_key_key`
-- `which_key_separator`
-- `which_key_description`
-- `which_key_separator_text`
-- `which_key_columns`
-
-The configured column count is reduced automatically on narrow terminals.
+Leave out any field to keep its default; missing fields are added back to the file with their defaults on the next start.

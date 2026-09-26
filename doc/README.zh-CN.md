@@ -1,97 +1,91 @@
 # Calibre TUI
 
-一个用于搜索 Calibre 书库并从终端打开书籍的轻量 TUI。
+在终端里搜索 Calibre 书库，然后打开书籍，或把书籍路径输出给 shell 脚本使用。
 
 [English](../README.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
 
-### 功能
+https://github.com/user-attachments/assets/7e741b94-80e0-4c61-8479-57e963c01d3e
 
-* 按标题、作者、系列和标签搜索。空格分隔的多个词会按逻辑与匹配。
-* 支持拼音、日语、德语、法语、西班牙语、俄语 translator。
-* 可以同时启用多个 translator。原文搜索始终启用。
-* 支持多选书籍、打开书籍，或只把书籍路径输出到 stdout。
-* 可以在 `config.toml` 中按格式配置打开命令。
-* 界面保持紧凑固定，不提供复杂 UI 和主题配置。
+## 功能
 
-### 构建
+- 边输入边搜索标题、作者、系列、格式和标签。用空格分隔的多个词必须全部匹配。
+- 用拉丁字母键盘搜索其他文字：中文用拼音（默认开启），日文假名用罗马字，俄文用拉丁转写，德语、法语、西班牙语可以不输入变音符号。
+- 可以多选书籍，然后打开、复制路径，或输出路径并退出，方便在 shell 管道中使用。
+- 可以按格式指定打开程序，例如用 `zathura` 打开 PDF；未指定的格式使用系统默认程序。
+- 通过 `Ctrl+S` 快捷键或 `sort` 命令按任意字段排序。
+- 在带注释的 TOML 文件中自定义列、快捷键（包括带提示的多键序列）和配色。
+- Calibre 运行时也能使用；程序只读取书库，从不写入。
+
+## 安装
+
+Arch Linux（AUR）：
 
 ```bash
+yay -S calibre-tui-bin   # 预编译二进制
+yay -S calibre-tui       # 最新正式版，从源码构建
+yay -S calibre-tui-git   # 最新 git 版本，从源码构建
+```
+
+Homebrew：
+
+```bash
+brew install WindustH/tap/calibre-tui          # 预编译二进制
+brew install --HEAD WindustH/tap/calibre-tui   # 最新 git 版本
+```
+
+每个 GitHub Release 都附有 Linux（x86_64）、macOS（Apple Silicon）和 Windows（x86_64）的预编译二进制。
+
+从源码构建需要 Rust；在 Linux 上还需要 SQLite 开发包（例如 `libsqlite3-dev`）：
+
+```bash
+git clone --recursive https://github.com/WindustH/calibre-tui.git
+cd calibre-tui
 cargo build --release
 ./target/release/calibre-tui
 ```
 
-### 配置
+## 使用
 
-配置文件位于 Linux 的 `~/.config/calibre-tui/`。如果不存在，程序会写入默认文件。
+运行 `calibre-tui`。程序会自动查找 Calibre 书库；如果找不到，请在 `config.toml` 中设置 `library_path`。
 
-```toml
-library_path = ""
+- 直接输入即可搜索，`Backspace` 删除。
+- `Up` / `Down` 或鼠标滚轮：移动；`PgUp` / `PgDn`、`Home` / `End`：跳转。
+- `Tab`：选中或取消选中当前书籍。`Ctrl+A` 选中全部结果，`Ctrl+X` 清空选择。
+- `Enter`：打开选中的书籍；没有选中时打开当前书籍。
+- `Ctrl+Y`：把这些书籍的路径复制到剪贴板。
+- `Ctrl+P`：输出这些书籍的路径并退出。
+- `Ctrl+S` 后按一个字母：排序（`t` 标题、`a` 作者、`s` 系列、`f` 格式、`g` 标签；大写为降序）。
+- `Ctrl+T`：命令提示符，例如 `sort authors asc title desc`。
+- `F1`：显示所有快捷键。
+- `Esc` 或 `Ctrl+C`：退出。
 
-[open.commands]
-pdf = ["zathura", "{path}"]
-epub = ["foliate", "{path}"]
+加上 `--exit-on-open` 参数，打开书籍后会自动退出。
 
-[filter]
-translators = ["pinyin", "romaji", "german-latin", "french-latin", "spanish-latin", "russian-latin"]
-pinyin_fuzzy = true
-pinyin_fuzzy_groups = [
-    ["on", "ong"],
-    ["an", "ang"],
-    ["en", "eng"],
-    ["in", "ing"]
-]
+路径会逐行输出到 stdout，而界面仍显示在终端上，因此可以直接在脚本中使用：
+
+```bash
+zathura "$(calibre-tui)"                    # 打开一本书
+calibre-tui | xargs -d '\n' -r cp -t ~/usb  # 复制选中的书籍（GNU xargs）
 ```
 
-* `library_path`：Calibre 书库路径。留空时会自动查找常见位置。
-* `open.commands.<format>`：某种格式使用的打开命令 argv。未配置的格式使用系统默认打开方式；如果没有写 `{path}`，路径会自动追加到最后。
-* `filter.translators`：启用的搜索 translator。支持 `pinyin`、`romaji`、`german-latin`、`french-latin`、`spanish-latin`、`russian-latin`。
-* `filter.pinyin_fuzzy`：是否启用拼音模糊匹配。
-* `filter.pinyin_fuzzy_groups`：等价拼音片段，每组第一个值是归一化后的标准形式。
+## 配置
 
-Translator 行为：
+首次运行时会创建四个带注释的默认配置文件：
 
-* `pinyin`：中文汉字可用拼音搜索，并支持可配置的模糊拼音。
-* `romaji`：日语假名可用 romaji 搜索，全角 ASCII 会归一化。没有词典时不会推断任意汉字读音，但原文搜索仍然可用。
-* `german-latin`：德语 `ä/ö/ü/ß` 可用 `ae/oe/ue/ss` 匹配。
-* `french-latin`：折叠法语重音字母，例如 `étranger` 可用 `etranger` 匹配。
-* `spanish-latin`：折叠西班牙语重音字母，例如 `niñez` 可用 `ninez` 匹配。
-* `russian-latin`：俄语西里尔字母可用拉丁转写搜索，例如 `Преступление` 可用 `prestuplenie` 匹配。
+- `config.toml`：书库路径、按格式指定的打开程序、搜索转写
+- `layout.toml`：显示哪些列、列的顺序和宽度，以及搜索哪些字段
+- `keymap.toml`：快捷键
+- `theme.toml`：配色
 
-### 快捷键
+它们位于 Linux 的 `~/.config/calibre-tui/`、macOS 的 `~/Library/Application Support/calibre-tui/` 和 Windows 的 `%APPDATA%\calibre-tui\`。新版本增加设置项时，会自动用默认值补全。无法读取的文件会另存为 `<文件名>.bak-<时间戳>`，并替换为默认配置。
 
-`keymap.toml` 控制快捷键：
+## 文档
 
-```toml
-[browser]
-keymap = [
-  { on = "esc", run = "quit", desc = "Quit" },
-  { on = "enter", run = "open", desc = "Open selected books" },
-]
+完整文档为英文：
 
-[global]
-keymap = [
-  { on = "f1", run = "help", desc = "Show key bindings" },
-  { on = "ctrl-t", run = "command", desc = "Enter command" },
-]
-```
-
-当前按键命名、按键序列和动作说明见 [Keymap](keymap.md)。
-
-### 使用
-
-* `Up` / `Down` 或鼠标滚轮：移动光标。
-* `PgUp` / `PgDown`：翻页移动。
-* `Home` / `End`：跳到第一项或最后一项。
-* `Tab`：切换当前书籍的多选状态，选中后自动下移一格。
-* `Ctrl+A`：选中当前过滤结果里的所有书籍。
-* `Ctrl+X`：清空选中。
-* `Ctrl+P`：把选中书籍路径输出到 stdout 并退出。
-* `Ctrl+Y`：把选中书籍路径复制到系统剪切板；没有选中时复制光标所在书籍。
-* `Ctrl+S` 后接排序键：应用常用排序。
-* `Ctrl+T`：进入命令模式。
-* `F1`：显示按键帮助。
-* `Enter`：打开选中的书籍；如果没有选中书籍，则打开光标所在书籍。
-* `Esc` 或 `Ctrl+C`：退出。
-* `--exit-on-open`：打开书籍后退出。
-
-最新完整文档见 [doc/index.md](index.md)。
+- [快速入门](quick-start.md)
+- [操作](controls.md) 与 [命令](commands.md)
+- [搜索](search.md)
+- [配置](configuration.md)、[布局](layout.md)、[快捷键](keymap.md)、[主题](theme.md)
+- [故障排除](troubleshooting.md)
+- [架构](architecture.md)（面向贡献者）

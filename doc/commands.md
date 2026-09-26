@@ -1,59 +1,36 @@
 # Commands
 
-Open the command prompt with `Ctrl+T`.
-
-While the prompt is open:
-
-- `Tab`: select the next completion candidate
-- `Shift+Tab`: select the previous completion candidate
-- `Enter`: apply the selected completion; press `Enter` again to run when the command is complete
-- `Up` / `Down`: browse command history for the current session
-- `Esc`: cancel the prompt
-- `F1`: show key bindings
-
-The prompt accepts commands with or without a leading colon.
+Press `Ctrl+T` to open the command prompt, type a command, and press `Enter`. A leading `:` is optional. Completions appear as you type; `Tab` and `Shift+Tab` choose one and `Enter` accepts it (press `Enter` again to run). `Up` and `Down` recall commands from the current session.
 
 ## `sort`
 
-Syntax:
-
 ```text
-sort <field> [asc|desc] [field] [asc|desc] ...
+sort <field> [asc|desc] [<field> [asc|desc]] ...
 ```
 
-Fields:
+Sorts the results by one or more fields. Later fields break ties in earlier ones.
 
-- `title`
-- `authors`
-- `series`
-- `formats`
-- `tags`
-
-Directions:
-
-- `asc`
-- `desc`
-
-If a direction is omitted, `asc` is used.
+- Fields: `title`, `authors`, `series`, `formats`, `tags` (also `name`, `author`, `format`, `tag`).
+- Directions: `asc` (the default) or `desc` (also `ascending`, `descending`).
+- Names are case-insensitive.
 
 Examples:
 
 ```text
-sort title asc
 sort title desc
-sort authors asc title asc
+sort authors title
+sort series asc title asc
 sort formats desc title asc
-sort tags desc authors asc title asc
 ```
 
-Sort keys are applied after search match-field priority from `layout.toml`. For example, if `title` is before `formats` in `layout.toml`, title matches are grouped before format-only matches; then the selected sort keys order items inside those groups.
+The default order is `sort title asc`, and the current sort is shown in the search box title. Comparison ignores ASCII letter case. Multi-value fields compare as displayed, for example `Author A & Author B`.
+
+While searching, books are first grouped by the searchable field they matched, following the column order in [`layout.toml`](layout.md): with the default layout, title matches come before author-only matches, and so on. The sort applies within each group. See [Search](search.md#result-order).
 
 ## `help`
-
-Show key bindings:
 
 ```text
 help
 ```
 
-This is equivalent to pressing `F1`.
+Shows the key bindings, like `F1`.

@@ -1,90 +1,91 @@
 # Calibre TUI
 
-Calibre ライブラリを端末上で検索し、本を開くための小さな TUI です。
+Calibre ライブラリをターミナルで検索し、本を開いたり、シェルスクリプト用にファイルパスを出力したりできる TUI です。
 
 [English](../README.md) | [中文](README.zh-CN.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Русский](README.ru.md)
 
-### 機能
+https://github.com/user-attachments/assets/7e741b94-80e0-4c61-8479-57e963c01d3e
 
-* タイトル、著者、シリーズ、タグを検索できます。空白で区切った語は AND 条件で一致します。
-* Pinyin、日本語、ドイツ語、フランス語、スペイン語、ロシア語の translator をサポートします。
-* 複数の translator を同時に有効化できます。原文検索は常に有効です。
-* 複数選択、直接オープン、stdout へのパス出力に対応します。
-* UI とテーマの細かい設定は持たず、固定でコンパクトな画面です。
+## 特長
 
-### ビルド
+- 入力と同時に、タイトル・著者・シリーズ・形式・タグを検索します。スペースで区切った語はすべて一致する必要があります。
+- ラテン文字のキーボードで他の文字を検索できます。中国語はピンイン（既定で有効）、日本語の仮名はローマ字、ロシア語は翻字で検索でき、ドイツ語・フランス語・スペイン語はアクセントなしで入力できます。
+- 複数の本を選択して開く、パスをコピーする、またはパスを出力して終了し、シェルのパイプで使うことができます。
+- 形式ごとに開くプログラムを指定できます（例：PDF は `zathura`）。指定がない形式はシステムの既定アプリで開きます。
+- `Ctrl+S` のショートカットや `sort` コマンドで任意のフィールドで並べ替えられます。
+- 列、キー割り当て（ヒント付きの複数キーシーケンスを含む）、配色を、コメント付きの TOML ファイルで設定できます。
+- Calibre の起動中でも使えます。ライブラリは読み取るだけで、書き込みは一切しません。
+
+## インストール
+
+Arch Linux（AUR）：
 
 ```bash
+yay -S calibre-tui-bin   # ビルド済みバイナリ
+yay -S calibre-tui       # 最新リリースをソースからビルド
+yay -S calibre-tui-git   # 最新の git 版をソースからビルド
+```
+
+Homebrew：
+
+```bash
+brew install WindustH/tap/calibre-tui          # ビルド済みバイナリ
+brew install --HEAD WindustH/tap/calibre-tui   # 最新の git 版
+```
+
+各 GitHub リリースには、Linux（x86_64）、macOS（Apple Silicon）、Windows（x86_64）向けのビルド済みバイナリが添付されています。
+
+ソースからビルドするには Rust が必要です。Linux では SQLite の開発パッケージ（例：`libsqlite3-dev`）も必要です。
+
+```bash
+git clone --recursive https://github.com/WindustH/calibre-tui.git
+cd calibre-tui
 cargo build --release
 ./target/release/calibre-tui
 ```
 
-### 設定
+## 使い方
 
-Linux では設定ファイルは `~/.config/calibre-tui/` に保存されます。存在しない場合は既定値が生成されます。
+`calibre-tui` を実行します。Calibre ライブラリは自動で見つかります。見つからない場合は `config.toml` の `library_path` を設定してください。
 
-```toml
-library_path = ""
+- 文字を入力すると検索、`Backspace` で削除します。
+- `Up` / `Down` またはマウスホイール：移動。`PgUp` / `PgDn`、`Home` / `End`：ジャンプ。
+- `Tab`：フォーカス中の本を選択／選択解除。`Ctrl+A` で結果をすべて選択、`Ctrl+X` で選択を解除。
+- `Enter`：選択した本を開きます。選択がなければフォーカス中の本を開きます。
+- `Ctrl+Y`：それらのパスをクリップボードにコピー。
+- `Ctrl+P`：それらのパスを出力して終了。
+- `Ctrl+S` の後に文字キー：並べ替え（`t` タイトル、`a` 著者、`s` シリーズ、`f` 形式、`g` タグ。大文字で降順）。
+- `Ctrl+T`：コマンドプロンプト（例：`sort authors asc title desc`）。
+- `F1`：すべてのキー割り当てを表示。
+- `Esc` または `Ctrl+C`：終了。
 
-[filter]
-translators = ["pinyin", "romaji", "german-latin", "french-latin", "spanish-latin", "russian-latin"]
-pinyin_fuzzy = true
-pinyin_fuzzy_groups = [
-    ["on", "ong"],
-    ["an", "ang"],
-    ["en", "eng"],
-    ["in", "ing"]
-]
+`--exit-on-open` を付けると、本を開いた後に終了します。
+
+パスは 1 行に 1 つずつ stdout に出力され、画面はターミナルに表示されたままなので、スクリプトで利用できます。
+
+```bash
+zathura "$(calibre-tui)"                    # 1 冊を開く
+calibre-tui | xargs -d '\n' -r cp -t ~/usb  # 選択した本をコピー（GNU xargs）
 ```
 
-* `library_path`: Calibre ライブラリのパスです。空の場合は一般的な場所から自動検出します。
-* `filter.translators`: 有効にする検索 translator です。`pinyin`、`romaji`、`german-latin`、`french-latin`、`spanish-latin`、`russian-latin` を指定できます。
-* `filter.pinyin_fuzzy`: Pinyin のあいまい一致を有効にします。
-* `filter.pinyin_fuzzy_groups`: 等価な Pinyin 断片です。各グループの先頭が正規形です。
+## 設定
 
-Translator の動作:
+初回起動時に、コメント付きの既定値で 4 つのファイルが作成されます。
 
-* `pinyin`: 中国語の漢字を Pinyin で検索できます。
-* `romaji`: かなを romaji で検索できます。全角 ASCII も正規化します。辞書なしで任意の漢字読みは推定しませんが、原文検索は使えます。
-* `german-latin`: `ä/ö/ü/ß` を `ae/oe/ue/ss` として検索できます。
-* `french-latin`: アクセント付きラテン文字を折りたたみ、`étranger` を `etranger` で検索できます。
-* `spanish-latin`: アクセント付きラテン文字を折りたたみ、`niñez` を `ninez` で検索できます。
-* `russian-latin`: キリル文字をラテン転写で検索できます。例: `Преступление` は `prestuplenie`。
+- `config.toml`：ライブラリのパス、形式ごとの起動プログラム、検索用の変換
+- `layout.toml`：表示する列、その順序と幅、検索対象のフィールド
+- `keymap.toml`：キー割り当て
+- `theme.toml`：配色
 
-### キー設定
+場所は Linux が `~/.config/calibre-tui/`、macOS が `~/Library/Application Support/calibre-tui/`、Windows が `%APPDATA%\calibre-tui\` です。アップデートで設定項目が増えると、既定値で自動的に補われます。読み込めなくなったファイルは `<ファイル名>.bak-<タイムスタンプ>` として保存され、既定値に置き換えられます。
 
-`keymap.toml` でショートカットを変更できます。
+## ドキュメント
 
-```toml
-[browser]
-keymap = [
-  { on = "esc", run = "quit", desc = "Quit" },
-  { on = "enter", run = "open", desc = "Open selected books" },
-]
+詳しいドキュメントは英語です。
 
-[global]
-keymap = [
-  { on = "f1", run = "help", desc = "Show key bindings" },
-  { on = "ctrl-t", run = "command", desc = "Enter command" },
-]
-```
-
-現在のキー名、キーシーケンス、アクションについては [Keymap](keymap.md) を参照してください。
-
-### 使い方
-
-* `Up` / `Down` またはマウスホイール: カーソル移動。
-* `PgUp` / `PgDown`: 1 ページ移動。
-* `Home` / `End`: 先頭または末尾へ移動。
-* `Tab`: 現在の本の選択を切り替えます。選択した場合は次の行へ移動します。
-* `Ctrl+A`: 現在の検索結果をすべて選択。
-* `Ctrl+X`: 選択をすべて解除。
-* `Ctrl+P`: 選択した本のパスを stdout に出力して終了。
-* `Ctrl+S` に続けてソートキー: よく使うソートを適用。
-* `Ctrl+T`: コマンドモードを開く。
-* `F1`: キーバインドヘルプを表示。
-* `Enter`: 選択中の本を開きます。選択がない場合はカーソル上の本を開きます。
-* `Esc` または `Ctrl+C`: 終了。
-* `--exit-on-open`: 本を開いたあと終了。
-
-最新の詳細ドキュメントは [doc/index.md](index.md) を参照してください。
+- [クイックスタート](quick-start.md)
+- [操作](controls.md) と [コマンド](commands.md)
+- [検索](search.md)
+- [設定](configuration.md)、[レイアウト](layout.md)、[キーマップ](keymap.md)、[テーマ](theme.md)
+- [トラブルシューティング](troubleshooting.md)
+- [アーキテクチャ](architecture.md)（開発者向け）

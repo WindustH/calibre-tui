@@ -56,15 +56,25 @@ pub fn load_toml_or_reset_with<T, U>(
 where
   T: Clone + Serialize + DeserializeOwned + CommentedToml,
 {
+  // Serialize the defaults before touching the user's file, so a failure here
+  // is never mistaken for an incompatible file.
+  let default_value = toml::Value::try_from(&default).with_context(|| {
+    format!(
+      "failed to serialize default config for '{}'",
+      path.display()
+    )
+  })?;
   if !path.exists() {
     write_config(path, &default)?;
   }
 
   let content =
     fs::read_to_string(path).with_context(|| format!("failed to read config file: {:?}", path))?;
-  match read_fill_and_compile(path, &content, default.clone(), &compile) {
-    Ok((config, value, should_write)) => {
-      if should_write {
+  match read_fill_and_compile(path, &content, &default_value, &compile) {
+    Ok((config, value, fields_added)) => {
+      // Only a file that gained fields is rewritten; otherwise the user's own
+      // comments and formatting are kept.
+      if fields_added {
         write_config(path, &config)?;
       }
       Ok(value)
@@ -83,33 +93,26 @@ where
   }
 }
 
+/// Parse `content`, fill fields missing from it with defaults, and compile it.
+/// Returns the config, its compiled form, and whether any field was added.
 fn read_fill_and_compile<T, U>(
   path: &Path,
   content: &str,
-  default: T,
+  default_value: &toml::Value,
   compile: &impl Fn(T) -> Result<U>,
 ) -> Result<(T, U, bool)>
 where
-  T: Clone + Serialize + DeserializeOwned + CommentedToml,
+  T: Clone + DeserializeOwned,
 {
   let mut value: toml::Value = toml::from_str(content)
     .with_context(|| format!("failed to parse config file '{}'", path.display()))?;
-  let default_document = toml::to_string_pretty(&default)?;
-  let default_value: toml::Value = toml::from_str(&default_document).with_context(|| {
-    format!(
-      "failed to parse built-in default config for '{}'",
-      path.display()
-    )
-  })?;
-  let mut added_paths = Vec::new();
-  merge_missing_values(&mut value, &default_value, "", &mut added_paths);
+  let fields_added = merge_missing_values(&mut value, default_value);
 
   let config: T = value
     .try_into()
     .with_context(|| format!("failed to parse config file '{}'", path.display()))?;
   let compiled = compile(config.clone())?;
-  let next_document = config.to_commented_toml()?;
-  Ok((config, compiled, next_document != content))
+  Ok((config, compiled, fields_added))
 }
 
 fn write_config<T>(path: &Path, config: &T) -> Result<()>
@@ -125,30 +128,25 @@ where
   Ok(())
 }
 
-fn merge_missing_values(
-  target: &mut toml::Value,
-  default: &toml::Value,
-  path: &str,
-  added_paths: &mut Vec<String>,
-) {
+/// Recursively insert tables and keys from `default` that `target` lacks.
+/// Arrays are left alone. Returns whether anything was inserted.
+fn merge_missing_values(target: &mut toml::Value, default: &toml::Value) -> bool {
   let (Some(target_table), Some(default_table)) = (target.as_table_mut(), default.as_table())
   else {
-    return;
+    return false;
   };
 
+  let mut added = false;
   for (key, default_value) in default_table {
-    let child_path = if path.is_empty() {
-      key.clone()
-    } else {
-      format!("{path}.{key}")
-    };
-    if let Some(target_value) = target_table.get_mut(key) {
-      merge_missing_values(target_value, default_value, &child_path, added_paths);
-    } else {
-      target_table.insert(key.clone(), default_value.clone());
-      added_paths.push(child_path);
+    match target_table.get_mut(key) {
+      Some(target_value) => added |= merge_missing_values(target_value, default_value),
+      None => {
+        target_table.insert(key.clone(), default_value.clone());
+        added = true;
+      }
     }
   }
+  added
 }
 
 fn backup_file(path: &Path) -> Result<PathBuf> {
@@ -331,4 +329,117 @@ fn key_path(trimmed: &str) -> Option<String> {
   }
   let (key, _) = trimmed.split_once('=')?;
   Some(key.trim().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use serde::Deserialize;
+
+  #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+  #[serde(deny_unknown_fields, default)]
+  struct Sample {
+    name: String,
+    nested: Nested,
+  }
+
+  #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+  #[serde(deny_unknown_fields, default)]
+  struct Nested {
+    count: u32,
+    flag: bool,
+  }
+
+  impl Default for Sample {
+    fn default() -> Self {
+      Self {
+        name: "default".to_string(),
+        nested: Nested::default(),
+      }
+    }
+  }
+
+  impl Default for Nested {
+    fn default() -> Self {
+      Self {
+        count: 3,
+        flag: true,
+      }
+    }
+  }
+
+  impl CommentedToml for Sample {
+    fn comments() -> &'static [TomlComment] {
+      &[TomlComment {
+        path: "nested.count",
+        lines: &["How many."],
+      }]
+    }
+  }
+
+  fn temp_config(name: &str, content: Option<&str>) -> PathBuf {
+    let dir =
+      std::env::temp_dir().join(format!("calibre-tui-config-{name}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("sample.toml");
+    if let Some(content) = content {
+      fs::write(&path, content).unwrap();
+    }
+    path
+  }
+
+  fn load(path: &Path) -> Sample {
+    load_toml_or_reset(path, Sample::default(), "sample").unwrap()
+  }
+
+  fn cleanup(path: &Path) {
+    fs::remove_dir_all(path.parent().unwrap()).unwrap();
+  }
+
+  #[test]
+  fn missing_file_is_created_with_comments() {
+    let path = temp_config("missing", None);
+    assert_eq!(load(&path), Sample::default());
+    let written = fs::read_to_string(&path).unwrap();
+    assert!(written.contains("# How many.\ncount = 3"));
+    cleanup(&path);
+  }
+
+  #[test]
+  fn complete_file_keeps_user_comments() {
+    let content = "# mine\nname = \"x\" # inline\n\n[nested]\ncount = 5\nflag = false\n";
+    let path = temp_config("complete", Some(content));
+    assert_eq!(load(&path).nested.count, 5);
+    assert_eq!(fs::read_to_string(&path).unwrap(), content);
+    cleanup(&path);
+  }
+
+  #[test]
+  fn missing_fields_are_filled_and_values_kept() {
+    let path = temp_config("partial", Some("name = \"x\"\n[nested]\ncount = 5\n"));
+    let loaded = load(&path);
+    assert_eq!((loaded.name.as_str(), loaded.nested.count), ("x", 5));
+    let written = fs::read_to_string(&path).unwrap();
+    assert!(written.contains("flag = true") && written.contains("count = 5"));
+    cleanup(&path);
+  }
+
+  #[test]
+  fn incompatible_file_is_backed_up_and_reset() {
+    let path = temp_config("invalid", Some("name = \"x\"\nunknown = 1\n"));
+    assert_eq!(load(&path), Sample::default());
+    let backups = fs::read_dir(path.parent().unwrap())
+      .unwrap()
+      .filter_map(|entry| entry.ok())
+      .filter(|entry| {
+        entry
+          .file_name()
+          .to_string_lossy()
+          .starts_with("sample.toml.bak-")
+      })
+      .count();
+    assert_eq!(backups, 1);
+    cleanup(&path);
+  }
 }

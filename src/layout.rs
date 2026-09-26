@@ -1,6 +1,7 @@
 use crate::config_file::{
   CommentedToml, TomlComment, app_config_dir, load_toml_or_reset_with, serialize_with_comments,
 };
+use crate::library::BookField;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -17,16 +18,6 @@ pub struct LayoutColumn {
   pub visible: bool,
   pub search: bool,
   pub width: u16,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum BookField {
-  Title,
-  Authors,
-  Series,
-  Formats,
-  Tags,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,33 +52,6 @@ impl Layout {
       .iter()
       .filter(|column| column.search)
       .map(|column| column.field)
-  }
-}
-
-impl BookField {
-  pub fn parse(input: &str) -> Option<Self> {
-    match input.to_ascii_lowercase().as_str() {
-      "title" | "name" => Some(Self::Title),
-      "author" | "authors" => Some(Self::Authors),
-      "series" => Some(Self::Series),
-      "format" | "formats" => Some(Self::Formats),
-      "tag" | "tags" => Some(Self::Tags),
-      _ => None,
-    }
-  }
-
-  pub fn name(self) -> &'static str {
-    match self {
-      Self::Title => "title",
-      Self::Authors => "authors",
-      Self::Series => "series",
-      Self::Formats => "formats",
-      Self::Tags => "tags",
-    }
-  }
-
-  fn default_label(self) -> &'static str {
-    self.name()
   }
 }
 
@@ -159,7 +123,7 @@ impl CommentedToml for LayoutConfig {
     let mut normalized = self.clone();
     for column in &mut normalized.columns {
       if column.label.is_none() {
-        column.label = Some(column.field.default_label().to_string());
+        column.label = Some(column.field.name().to_string());
       }
     }
     serialize_with_comments(&normalized, Self::comments())
@@ -176,13 +140,13 @@ impl LayoutConfig {
     let mut columns = Vec::new();
     for column in self.columns {
       if !seen.insert(column.field) {
-        bail!("duplicate layout column '{:?}'", column.field);
+        bail!("duplicate layout column '{}'", column.field.name());
       }
 
       if column.visible && column.width == 0 {
         bail!(
-          "visible layout column '{:?}' must have width > 0",
-          column.field
+          "visible layout column '{}' must have width > 0",
+          column.field.name()
         );
       }
 
@@ -190,7 +154,7 @@ impl LayoutConfig {
         field: column.field,
         label: column
           .label
-          .unwrap_or_else(|| column.field.default_label().to_string()),
+          .unwrap_or_else(|| column.field.name().to_string()),
         visible: column.visible,
         search: column.search,
         width: column.width,
