@@ -1,12 +1,237 @@
-quit = ["esc", "ctrl-c"]
-submit = ["enter"]
-move_up = ["up"]
-move_down = ["down"]
-page_up = ["pgup"]
-page_down = ["pgdown"]
-jump_start = ["home"]
-jump_end = ["end"]
-toggle_selection = ["tab"]
-select_all = ["ctrl-a"]
-clear_selection = ["ctrl-x"]
-delete_input = ["backspace"]
+# Keyboard shortcuts are grouped by context.
+# Use a string in `on` for one key, or an array for a key sequence.
+# Key names include enter, esc, tab, backspace, up, down, left, right, home, end, pgup, pgdn, delete, insert, space, f1, single characters, ctrl-x, and alt-x.
+# A browser shortcut. Repeated shortcut fields are documented only once.
+[[browser.keymap]]
+# Key or key sequence that triggers this binding.
+on = "esc"
+# Action or command string to run.
+run = "quit"
+# Description shown in F1 help and which-key hints.
+desc = "Quit"
+
+[[browser.keymap]]
+on = "ctrl-c"
+run = "quit"
+desc = "Quit"
+
+[[browser.keymap]]
+on = "enter"
+run = "open"
+desc = "Open selected books"
+
+[[browser.keymap]]
+on = "up"
+run = "move_up"
+desc = "Move up"
+
+[[browser.keymap]]
+on = "down"
+run = "move_down"
+desc = "Move down"
+
+[[browser.keymap]]
+on = "pgup"
+run = "page_up"
+desc = "Move one page up"
+
+[[browser.keymap]]
+on = "pgdn"
+run = "page_down"
+desc = "Move one page down"
+
+[[browser.keymap]]
+on = "pagedown"
+run = "page_down"
+desc = "Move one page down"
+
+[[browser.keymap]]
+on = "home"
+run = "jump_start"
+desc = "Jump to first result"
+
+[[browser.keymap]]
+on = "end"
+run = "jump_end"
+desc = "Jump to last result"
+
+[[browser.keymap]]
+on = "tab"
+run = "toggle_selection"
+desc = "Toggle selection"
+
+[[browser.keymap]]
+on = "ctrl-a"
+run = "select_all"
+desc = "Select all results"
+
+[[browser.keymap]]
+on = "ctrl-x"
+run = "clear_selection"
+desc = "Clear selection"
+
+[[browser.keymap]]
+on = "backspace"
+run = "delete_input"
+desc = "Delete search input"
+
+[[browser.keymap]]
+on = "ctrl-p"
+run = "print_paths"
+desc = "Print selected paths and quit"
+
+[[browser.keymap]]
+on = "ctrl-y"
+run = "copy_paths"
+desc = "Copy selected paths"
+
+[[browser.keymap]]
+on = ["ctrl-s", "t"]
+run = "sort title asc"
+desc = "Sort title ascending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "T"]
+run = "sort title desc"
+desc = "Sort title descending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "a"]
+run = "sort authors asc"
+desc = "Sort authors ascending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "A"]
+run = "sort authors desc"
+desc = "Sort authors descending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "s"]
+run = "sort series asc"
+desc = "Sort series ascending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "S"]
+run = "sort series desc"
+desc = "Sort series descending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "f"]
+run = "sort formats asc"
+desc = "Sort formats ascending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "F"]
+run = "sort formats desc"
+desc = "Sort formats descending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "g"]
+run = "sort tags asc"
+desc = "Sort tags ascending"
+
+[[browser.keymap]]
+on = ["ctrl-s", "G"]
+run = "sort tags desc"
+desc = "Sort tags descending"
+
+# Reserved for detail views. Leave empty if unused.
+[detail]
+keymap = []
+
+# Command prompt shortcut bindings.
+[[input.keymap]]
+on = "f1"
+run = "help"
+desc = "Show key bindings"
+
+[[input.keymap]]
+on = "esc"
+run = "cancel"
+desc = "Cancel input"
+
+[[input.keymap]]
+on = "enter"
+run = "submit"
+desc = "Submit input"
+
+[[input.keymap]]
+on = "backspace"
+run = "backspace"
+desc = "Delete before cursor"
+
+[[input.keymap]]
+on = "delete"
+run = "delete"
+desc = "Delete under cursor"
+
+[[input.keymap]]
+on = "left"
+run = "move_left"
+desc = "Move cursor left"
+
+[[input.keymap]]
+on = "right"
+run = "move_right"
+desc = "Move cursor right"
+
+[[input.keymap]]
+on = "home"
+run = "move_start"
+desc = "Move cursor to start"
+
+[[input.keymap]]
+on = "ctrl-a"
+run = "move_start"
+desc = "Move cursor to start"
+
+[[input.keymap]]
+on = "end"
+run = "move_end"
+desc = "Move cursor to end"
+
+[[input.keymap]]
+on = "ctrl-e"
+run = "move_end"
+desc = "Move cursor to end"
+
+[[input.keymap]]
+on = "ctrl-u"
+run = "kill_before_cursor"
+desc = "Delete before cursor"
+
+[[input.keymap]]
+on = "ctrl-k"
+run = "kill_after_cursor"
+desc = "Delete after cursor"
+
+[[input.keymap]]
+on = "tab"
+run = "completion_next"
+desc = "Select next completion"
+
+[[input.keymap]]
+on = "backtab"
+run = "completion_previous"
+desc = "Select previous completion"
+
+[[input.keymap]]
+on = "up"
+run = "history_previous"
+desc = "Previous command history"
+
+[[input.keymap]]
+on = "down"
+run = "history_next"
+desc = "Next command history"
+
+# Global shortcut bindings.
+[[global.keymap]]
+on = "f1"
+run = "help"
+desc = "Show key bindings"
+
+[[global.keymap]]
+on = "ctrl-t"
+run = "command"
+desc = "Enter command"

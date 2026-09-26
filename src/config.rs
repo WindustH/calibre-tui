@@ -1,12 +1,8 @@
 use crate::config_file::{CommentedToml, TomlComment, app_config_dir, load_toml_or_reset};
+use crate::library::{find_library, is_library};
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::{
-  collections::BTreeMap,
-  fs,
-  path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, path::PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -49,7 +45,7 @@ pub enum FilterTranslator {
 impl Default for Config {
   fn default() -> Self {
     Self {
-      library_path: find_calibre_library().unwrap_or_default(),
+      library_path: find_library().unwrap_or_default(),
       open: OpenConfig::default(),
       filter: FilterConfig::default(),
     }
@@ -135,11 +131,11 @@ pub fn load_config() -> Result<Config> {
   let mut config: Config = load_toml_or_reset(&config_path, Config::default(), "main")?;
 
   if config.library_path.as_os_str().is_empty() {
-    config.library_path = find_calibre_library()
+    config.library_path = find_library()
       .context("library_path is empty and no Calibre library was found in common locations")?;
   }
 
-  if !is_calibre_library(&config.library_path) {
+  if !is_library(&config.library_path) {
     bail!(
       "invalid Calibre library path '{}': metadata.db was not found",
       config.library_path.display()
@@ -147,37 +143,4 @@ pub fn load_config() -> Result<Config> {
   }
 
   Ok(config)
-}
-
-fn is_calibre_library(path: &Path) -> bool {
-  path.join("metadata.db").exists()
-}
-
-fn find_calibre_library() -> Option<PathBuf> {
-  possible_library_paths()
-    .into_iter()
-    .find(|path| is_calibre_library(path.as_path()))
-}
-
-fn possible_library_paths() -> Vec<PathBuf> {
-  let mut paths = Vec::new();
-
-  if let Some(home_dir) = dirs::home_dir() {
-    paths.push(home_dir.join("Calibre Library"));
-    paths.push(home_dir.join("Calibre-Bibliothek"));
-
-    let calibre_config_path = home_dir.join(".config/calibre/global.py.json");
-    if let Ok(content) = fs::read_to_string(calibre_config_path)
-      && let Ok(json) = serde_json::from_str::<Value>(&content)
-      && let Some(library_path) = json.get("library_path").and_then(Value::as_str)
-    {
-      paths.push(PathBuf::from(library_path));
-    }
-  }
-
-  if let Some(docs_dir) = dirs::document_dir() {
-    paths.push(docs_dir.join("Calibre Library"));
-  }
-
-  paths
 }

@@ -256,11 +256,11 @@ impl CommentedToml for Theme {
       },
       TomlComment {
         path: "accent",
-        lines: &["Accent color used for primary UI emphasis."],
+        lines: &["Reserved; not used by the current UI."],
       },
       TomlComment {
         path: "muted",
-        lines: &["Muted color used for secondary text."],
+        lines: &["Reserved; not used by the current UI."],
       },
       TomlComment {
         path: "search",
@@ -375,15 +375,34 @@ fn parse_color(value: &str) -> Color {
           .map(Color::Indexed)
           .unwrap_or(Color::Reset);
       }
-      if lower.len() == 7 && lower.starts_with('#') {
-        let r = u8::from_str_radix(&lower[1..3], 16);
-        let g = u8::from_str_radix(&lower[3..5], 16);
-        let b = u8::from_str_radix(&lower[5..7], 16);
-        if let (Ok(r), Ok(g), Ok(b)) = (r, g, b) {
-          return Color::Rgb(r, g, b);
-        }
+      if let Some(hex) = lower.strip_prefix('#')
+        && hex.len() == 6
+        && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+        && let Ok(rgb) = u32::from_str_radix(hex, 16)
+      {
+        let [_, r, g, b] = rgb.to_be_bytes();
+        return Color::Rgb(r, g, b);
       }
       Color::Reset
+    }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parses_named_indexed_and_rgb_colors() {
+    assert_eq!(parse_color(" Dark_Grey "), Color::DarkGray);
+    assert_eq!(parse_color("ansi:236"), Color::Indexed(236));
+    assert_eq!(parse_color("#FFaa00"), Color::Rgb(255, 170, 0));
+  }
+
+  #[test]
+  fn invalid_colors_fall_back_to_reset() {
+    for value in ["#a€bc", "#12345", "#12345g", "ansi:256", "purple", ""] {
+      assert_eq!(parse_color(value), Color::Reset, "{value:?}");
     }
   }
 }

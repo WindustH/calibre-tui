@@ -1,90 +1,91 @@
 # Calibre TUI
 
-Una pequeña interfaz de terminal para buscar en una biblioteca de Calibre y abrir libros.
+Una interfaz de terminal para buscar en tu biblioteca de Calibre y después abrir libros o imprimir sus rutas para scripts de shell.
 
 [English](../README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Русский](README.ru.md)
 
-### Funciones
+https://github.com/user-attachments/assets/7e741b94-80e0-4c61-8479-57e963c01d3e
 
-* Busca por título, autor, serie y etiquetas. Los términos separados por espacios se combinan con AND lógico.
-* Translators para Pinyin, japonés, alemán, francés, español y ruso.
-* Se pueden activar varios translators al mismo tiempo. La búsqueda por texto original siempre está activa.
-* Selección múltiple, apertura directa y salida de rutas de libros por stdout.
-* TUI compacta y fija, sin configuración compleja de UI o temas.
+## Funciones
 
-### Compilación
+- Búsqueda instantánea mientras escribes en título, autores, serie, formatos y etiquetas. Todos los términos separados por espacios deben coincidir.
+- Busca en otras escrituras desde un teclado latino: chino por pinyin (activado por defecto), kana japonés por romaji, ruso por transliteración, y alemán, francés o español sin tildes ni diéresis.
+- Selecciona varios libros para abrirlos, copiar sus rutas, o imprimir las rutas y salir para usarlas en tuberías de shell.
+- Elige un programa para abrir cada formato, por ejemplo `zathura` para PDF; si no, se usa la aplicación predeterminada del sistema.
+- Ordena por cualquier campo con los atajos `Ctrl+S` o el comando `sort`.
+- Personaliza columnas, atajos de teclado (incluidas secuencias de varias teclas con pistas) y colores en archivos TOML comentados.
+- Funciona con Calibre abierto; la biblioteca solo se lee, nunca se modifica.
+
+## Instalación
+
+Arch Linux (AUR):
 
 ```bash
+yay -S calibre-tui-bin   # binario precompilado
+yay -S calibre-tui       # última versión, compilada desde el código fuente
+yay -S calibre-tui-git   # última versión de git, compilada desde el código fuente
+```
+
+Homebrew:
+
+```bash
+brew install WindustH/tap/calibre-tui          # binario precompilado
+brew install --HEAD WindustH/tap/calibre-tui   # última versión de git
+```
+
+Cada release de GitHub incluye binarios precompilados para Linux (x86_64), macOS (Apple Silicon) y Windows (x86_64).
+
+Para compilar desde el código fuente necesitas Rust y, en Linux, el paquete de desarrollo de SQLite (por ejemplo `libsqlite3-dev`):
+
+```bash
+git clone --recursive https://github.com/WindustH/calibre-tui.git
+cd calibre-tui
 cargo build --release
 ./target/release/calibre-tui
 ```
 
-### Configuración
+## Uso
 
-En Linux, los archivos de configuración están en `~/.config/calibre-tui/`. Si no existen, la aplicación escribe archivos predeterminados.
+Ejecuta `calibre-tui`. La biblioteca de Calibre se detecta automáticamente; si no se encuentra, define `library_path` en `config.toml`.
 
-```toml
-library_path = ""
+- Escribe para buscar; `Backspace` borra.
+- `Up` / `Down` o la rueda del ratón: moverse; `PgUp` / `PgDn`, `Home` / `End`: saltar.
+- `Tab`: seleccionar o deseleccionar el libro actual. `Ctrl+A` selecciona todos los resultados y `Ctrl+X` borra la selección.
+- `Enter`: abrir los libros seleccionados, o el libro actual si no hay ninguno seleccionado.
+- `Ctrl+Y`: copiar sus rutas al portapapeles.
+- `Ctrl+P`: imprimir sus rutas y salir.
+- `Ctrl+S` y después una letra: ordenar (`t` título, `a` autores, `s` serie, `f` formatos, `g` etiquetas; en mayúscula, orden descendente).
+- `Ctrl+T`: línea de comandos, por ejemplo `sort authors asc title desc`.
+- `F1`: mostrar todos los atajos.
+- `Esc` o `Ctrl+C`: salir.
 
-[filter]
-translators = ["pinyin", "romaji", "german-latin", "french-latin", "spanish-latin", "russian-latin"]
-pinyin_fuzzy = true
-pinyin_fuzzy_groups = [
-    ["on", "ong"],
-    ["an", "ang"],
-    ["en", "eng"],
-    ["in", "ing"]
-]
+Con `--exit-on-open`, el programa se cierra después de abrir libros.
+
+Las rutas se imprimen en stdout, una por línea, mientras la interfaz sigue en la terminal, así que puedes usarlas en scripts:
+
+```bash
+zathura "$(calibre-tui)"                    # abrir un libro
+calibre-tui | xargs -d '\n' -r cp -t ~/usb  # copiar los libros seleccionados (GNU xargs)
 ```
 
-* `library_path`: ruta a la biblioteca de Calibre. Déjala vacía para detectar ubicaciones comunes.
-* `filter.translators`: translators de búsqueda a activar. Soporta `pinyin`, `romaji`, `german-latin`, `french-latin`, `spanish-latin` y `russian-latin`.
-* `filter.pinyin_fuzzy`: activa coincidencias Pinyin aproximadas.
-* `filter.pinyin_fuzzy_groups`: fragmentos Pinyin equivalentes. El primer elemento de cada grupo es la forma canónica.
+## Configuración
 
-Comportamiento de translators:
+En el primer arranque se crean cuatro archivos con valores predeterminados comentados:
 
-* `pinyin`: los Hanzi chinos se pueden buscar por Pinyin.
-* `romaji`: los kana se pueden buscar por romaji. El ASCII de ancho completo se normaliza. Las lecturas arbitrarias de Kanji no se infieren sin diccionario, pero la búsqueda por texto original sigue funcionando.
-* `german-latin`: `ä/ö/ü/ß` se pueden encontrar como `ae/oe/ue/ss`.
-* `french-latin`: los acentos se pliegan, por ejemplo `étranger` se puede encontrar con `etranger`.
-* `spanish-latin`: los acentos se pliegan, por ejemplo `niñez` se puede encontrar con `ninez`.
-* `russian-latin`: el cirílico se puede buscar por transliteración latina, por ejemplo `Преступление` con `prestuplenie`.
+- `config.toml`: ruta de la biblioteca, programas por formato, transliteraciones de búsqueda
+- `layout.toml`: columnas, su orden y ancho, y qué campos se buscan
+- `keymap.toml`: atajos de teclado
+- `theme.toml`: colores
 
-### Atajos
+Están en `~/.config/calibre-tui/` en Linux, `~/Library/Application Support/calibre-tui/` en macOS y `%APPDATA%\calibre-tui\` en Windows. Cuando una actualización añade ajustes, se completan con sus valores predeterminados. Un archivo que ya no se puede leer se guarda como `<nombre>.bak-<marca de tiempo>` y se reemplaza por los valores predeterminados.
 
-`keymap.toml` controla los atajos:
+## Documentación
 
-```toml
-[browser]
-keymap = [
-  { on = "esc", run = "quit", desc = "Quit" },
-  { on = "enter", run = "open", desc = "Open selected books" },
-]
+La documentación completa está en inglés:
 
-[global]
-keymap = [
-  { on = "f1", run = "help", desc = "Show key bindings" },
-  { on = "ctrl-t", run = "command", desc = "Enter command" },
-]
-```
-
-Los nombres de teclas, secuencias y acciones actuales están documentados en [Keymap](keymap.md).
-
-### Uso
-
-* `Up` / `Down` o rueda del mouse: mover el cursor.
-* `PgUp` / `PgDown`: mover una página.
-* `Home` / `End`: saltar al primer o último resultado.
-* `Tab`: alternar la selección del libro actual. Al seleccionarlo, el cursor baja una fila.
-* `Ctrl+A`: seleccionar todos los resultados filtrados.
-* `Ctrl+X`: limpiar la selección.
-* `Ctrl+P`: imprimir las rutas seleccionadas en stdout y salir.
-* `Ctrl+S` seguido de una tecla de ordenación: aplicar una ordenación común.
-* `Ctrl+T`: abrir el modo de comandos.
-* `F1`: mostrar la ayuda de atajos.
-* `Enter`: abrir los libros seleccionados. Si no hay selección, abrir el libro bajo el cursor.
-* `Esc` o `Ctrl+C`: salir.
-* `--exit-on-open`: salir después de abrir los libros.
-
-La documentación detallada actual está en [doc/index.md](index.md).
+- [Inicio rápido](quick-start.md)
+- [Controles](controls.md) y [comandos](commands.md)
+- [Búsqueda](search.md)
+- [Configuración](configuration.md), [diseño de columnas](layout.md), [atajos](keymap.md), [tema](theme.md)
+- [Solución de problemas](troubleshooting.md)
+- [Arquitectura](architecture.md), para colaboradores

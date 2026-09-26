@@ -1,13 +1,29 @@
+# Main calibre-tui configuration.
+# Missing fields are filled with defaults and this file is rewritten with comments.
+# Path to the Calibre library directory.
+# Leave empty to auto-detect common locations.
 library_path = ""
 
+# Format-specific opener commands. Formats are matched by file extension.
+# Leave this table empty to use the system opener for every format.
+# Keys are matched case-insensitively; use names like pdf, epub, mobi, cbz.
+# Use {path} in any argument to choose where the file path is inserted.
+# If {path} is omitted, the path is appended as the last argument.
+# Example: pdf = ["zathura", "{path}"]
+[open.commands]
+
+# Search indexing and text normalization options.
 [filter]
-# Supported: "pinyin", "romaji", "german-latin", "french-latin", "spanish-latin", "russian-latin"
-# Plain original text search is always enabled.
+# Search translators to enable.
+# Supported values: pinyin, romaji, german-latin, french-latin, spanish-latin, russian-latin.
 translators = ["pinyin"]
+# Enable fuzzy matching for Chinese pinyin fragments.
 pinyin_fuzzy = true
+# Equivalent pinyin fragments.
+# The first item in each group is treated as canonical.
 pinyin_fuzzy_groups = [
     ["on", "ong"],
     ["an", "ang"],
     ["en", "eng"],
-    ["in", "ing"]
+    ["in", "ing"],
 ]

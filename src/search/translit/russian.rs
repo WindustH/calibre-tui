@@ -1,24 +1,19 @@
-use super::{IndexedText, Translator, fullwidth_ascii, index_by_char, latin_char};
-use anyhow::Result;
+use super::{IndexedText, Translator, index_by_char, latin_char};
 
 pub(super) struct RussianLatinTranslator;
 
 impl Translator for RussianLatinTranslator {
-  fn index_text(&self, text: &str) -> Result<IndexedText> {
-    Ok(index_by_char(text, russian_char))
+  fn index_text(&self, text: &str) -> IndexedText {
+    index_by_char(text, russian_char)
   }
 
-  fn normalize_query(&self, query: &str) -> Result<String> {
-    Ok(index_by_char(query, russian_char).text)
+  fn normalize_query(&self, query: &str) -> String {
+    index_by_char(query, russian_char).into_text()
   }
 }
 
-fn russian_char(ch: char) -> String {
-  if let Some(converted) = fullwidth_ascii(ch) {
-    return converted.to_string();
-  }
-
-  match ch {
+fn russian_char(ch: char, out: &mut String) {
+  let latin = match ch {
     'А' | 'а' => "a",
     'Б' | 'б' => "b",
     'В' | 'в' => "v",
@@ -52,7 +47,7 @@ fn russian_char(ch: char) -> String {
     'Э' | 'э' => "e",
     'Ю' | 'ю' => "yu",
     'Я' | 'я' => "ya",
-    _ => return latin_char(ch),
-  }
-  .to_string()
+    _ => return latin_char(ch, out),
+  };
+  out.push_str(latin);
 }

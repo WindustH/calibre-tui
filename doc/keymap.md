@@ -1,21 +1,10 @@
 # Keymap
 
-`keymap.toml` controls keyboard shortcuts, including context-aware bindings, multi-key sequences, which-key hints, prompt editing, completion selection, and command history actions.
+`keymap.toml` holds every key binding, in the [configuration directory](configuration.md). The defaults are listed in [Controls](controls.md), and `F1` shows the bindings in effect.
 
-Default location:
+## Format
 
-- `~/.config/calibre-tui/keymap.toml`
-
-## Contexts
-
-The file is split into sections:
-
-- `browser`: active while browsing and searching books.
-- `detail`: reserved for future detail views.
-- `input`: active while the command prompt is open.
-- `global`: active from normal browsing contexts.
-
-Serde writes the default file with array-of-table entries:
+Bindings are grouped by context, and each binding has three fields:
 
 ```toml
 [[browser.keymap]]
@@ -29,7 +18,11 @@ run = "sort title asc"
 desc = "Sort title ascending"
 ```
 
-The compact form is also valid TOML:
+- `on`: one key, or a list of keys pressed one after another. While a sequence is incomplete, the footer lists the possible next keys with their `desc` (which-key); `Esc` cancels it.
+- `run`: the action to run.
+- `desc`: text shown in the `F1` help and in which-key hints.
+
+The same bindings can be written with inline tables:
 
 ```toml
 [browser]
@@ -39,61 +32,54 @@ keymap = [
 ]
 ```
 
+## Contexts
+
+| Section | Active |
+| --- | --- |
+| `browser` | In the book list |
+| `global` | In the book list too; if a key is bound in both sections, the `global` binding wins |
+| `input` | While the command prompt is open (`browser` and `global` are not used there) |
+| `detail` | Reserved; currently unused |
+
+A printable key bound in `browser` or `global` (for example `q`) can no longer be typed into the search.
+
 ## Key Names
 
-Supported key names include:
+- Characters: `a`, `T` (uppercase means with Shift), `/`, and so on; `space` for the space bar.
+- Special keys: `enter`, `esc`, `tab`, `backtab` (Shift+Tab), `backspace`, `delete`, `insert`, `left`, `right`, `up`, `down`, `home`, `end`, `pgup`, `pgdn` (`pageup` and `pagedown` also work), `f1` to `f12`.
+- Modifiers: `ctrl-x`, `alt-x`, for example `ctrl-t`, `alt-backspace`.
+- Vim-style names in angle brackets also work: `<Enter>`, `<Esc>`, `<Space>`, `<S-Tab>`, `<PageDown>`, `<C-c>`, `<A-x>`, `<F1>`.
 
-- characters such as `a`, `t`, `T`
-- `enter`, `esc`, `tab`, `backtab`, `backspace`, `delete`, `insert`, `space`
-- `left`, `right`, `up`, `down`, `home`, `end`, `pgup`, `pgdn`
-- function keys such as `f1`
-- modifiers such as `ctrl-c`, `ctrl-t`, `alt-x`
-- Yazi-style angle names, such as `<Enter>` or `<C-c>`
+Some terminals can't distinguish every combination; `Ctrl+/` and `Ctrl+;`, for instance, are reported inconsistently.
 
-`on` can be a single key or a key sequence. For a sequence, which-key hints are shown after the prefix key.
+## Book List Actions
 
-## Browser Actions
+| Action | Effect |
+| --- | --- |
+| `quit` | Quit |
+| `open` | Open the selected books, or the focused book |
+| `print_paths` | Print the paths of the selected or focused books to stdout and quit |
+| `copy_paths` | Copy those paths to the clipboard |
+| `move_up`, `move_down` | Move focus by one row |
+| `page_up`, `page_down` | Move focus by one page |
+| `jump_start`, `jump_end` | Focus the first or last result |
+| `toggle_selection` | Select or unselect the focused book and move down |
+| `select_all` | Select every book in the current results |
+| `clear_selection` | Clear the selection |
+| `delete_input` | Delete the last search character |
+| `command` | Open the command prompt |
+| `help` | Show key bindings |
+| `sort <field> [asc\|desc] ...` | Sort, with the same syntax as the [`sort` command](commands.md#sort) |
 
-Common browser actions:
+## Command Prompt Actions
 
-- `quit`
-- `open`
-- `print_paths`
-- `copy_paths`
-- `move_up`, `move_down`
-- `page_up`, `page_down`
-- `jump_start`, `jump_end`
-- `toggle_selection`
-- `select_all`
-- `clear_selection`
-- `delete_input`
-- `command`
-- `help`
-- `sort <field> [asc|desc] [field] [asc|desc] ...`
-
-Sort actions use the same syntax as the command prompt, without the leading colon.
-
-## Input Actions
-
-Prompt actions:
-
-- `cancel`, `submit`
-- `backspace`, `delete`
-- `move_left`, `move_right`, `move_start`, `move_end`
-- `kill_before_cursor`, `kill_after_cursor`
-- `completion_next`, `completion_previous`
-- `history_previous`, `history_next`
-
-## Defaults
-
-Important defaults:
-
-- `Esc`, `Ctrl+C`: quit
-- `Enter`: open selected/focused books
-- `Ctrl+P`: print paths and quit
-- `Ctrl+Y`: copy paths to the system clipboard
-- `Ctrl+T`: command prompt
-- `F1`: key binding help
-- `Ctrl+S` followed by a field key: common sorts
-
-When a key sequence is waiting for its next key, `Esc` clears that waiting state first instead of quitting.
+| Action | Effect |
+| --- | --- |
+| `submit` | Accept the highlighted completion, or run the command |
+| `cancel` | Close the prompt |
+| `backspace`, `delete` | Delete before / under the cursor |
+| `move_left`, `move_right`, `move_start`, `move_end` | Move the cursor |
+| `kill_before_cursor`, `kill_after_cursor` | Delete everything before / after the cursor |
+| `completion_next`, `completion_previous` | Choose a completion |
+| `history_previous`, `history_next` | Recall commands from this session |
+| `help` | Show key bindings |

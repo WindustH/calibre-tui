@@ -1,61 +1,58 @@
 # Troubleshooting
 
-## No Calibre Library Found
+## No Calibre library found
 
-Set `library_path` in `~/.config/calibre-tui/config.toml`:
+Startup fails with `library_path is empty and no Calibre library was found` when automatic detection finds nothing (see [Quick Start](quick-start.md#finding-your-library)). Set the path in `config.toml` ([where it is](configuration.md)):
 
 ```toml
 library_path = "/home/me/Calibre Library"
 ```
 
-The directory must contain `metadata.db`.
+## Invalid library path
 
-If `library_path` is empty, the app tries common locations. If none contain `metadata.db`, startup fails with a clear error.
+`invalid Calibre library path '...': metadata.db was not found` means `library_path` points to a directory without `metadata.db`. The file is not reset in this case, since the library might be on a drive that isn't mounted. Fix the path or mount the drive.
 
-## Invalid Library Path
+## Calibre is running
 
-An explicit invalid `library_path` is not treated as an incompatible config file. The app reports the error instead of overwriting your config, because the path may be temporarily unavailable due to an unmounted disk.
+That's fine: the database is opened read-only. If Calibre is in the middle of writing, calibre-tui waits briefly and then reads the file without locking, so the list may miss the very latest change. Restart calibre-tui to pick up new books.
 
-## Config Was Replaced
+## A config file was replaced
 
-When a config file cannot be parsed or no longer matches the expected structure, it is backed up before a new default file is generated:
+If a file couldn't be read (a typo, an unknown setting, a value of the wrong type), it was renamed to `<name>.bak-<timestamp>` and replaced with defaults; the message printed at startup names the backup and the error. Copy your settings back from the backup, fixing the reported problem.
 
-```text
-theme.toml.bak-<timestamp>
-```
+## My comments in a config file disappeared
 
-Review the backup and copy over any values you still want.
+Files are only rewritten when settings are missing, typically after an upgrade adds new ones. The rewritten file keeps your values but uses the generated layout and comments. A file that already has every setting is never modified.
 
-## New Config Fields Keep Appearing
+## A book doesn't open
 
-When a version adds fields, the app fills missing values with defaults and rewrites the file with comments. This is expected. Existing values are preserved.
-
-Repeated item fields are not documented repeatedly. For example, `columns.field` is documented on the first `[[columns]]` item only.
-
-Short scalar arrays are automatically rewritten onto one line when they fit. Longer arrays and arrays containing nested items stay multi-line.
-
-## A Format Opens With The Wrong App
-
-Set a format-specific command in `~/.config/calibre-tui/config.toml`:
+- "has no book file": the book is a metadata-only entry in Calibre with no format attached.
+- "book file not found": Calibre's database lists a file that is missing on disk. Check the library with Calibre.
+- "failed to run open command": the program in `open.commands` couldn't be started; check its name and that it is on your `PATH`.
+- Nothing happens: the system opener has no application for that format. Try `xdg-open <file>` (Linux) or `open <file>` (macOS) to see the error, or set a command in `open.commands`.
+- The wrong program opens: set a per-format command in `config.toml`. Formats are matched by file extension, case-insensitively.
 
 ```toml
 [open.commands]
 pdf = ["zathura", "{path}"]
-epub = ["foliate", "{path}"]
 ```
 
-The command is executed as argv, not through a shell. If `{path}` is omitted, the file path is appended as the final argument. Formats are matched by file extension, case-insensitively.
+When a book has several formats, the most recently added one is opened.
 
-## `Ctrl+/` Or `Ctrl+;` Does Not Open Commands
+## Copying paths fails
 
-The default command shortcut is `Ctrl+T`. Some terminals report `Ctrl+/` and `Ctrl+;` inconsistently, so they are not used by default.
+`Ctrl+Y` uses `wl-copy` (Wayland) or `xclip` / `xsel` (X11) on Linux, `pbcopy` on macOS, and `clip` on Windows. On Linux, install one of them.
 
-Change `global.keymap` in `keymap.toml` if you prefer a different shortcut.
+## Using printed paths in scripts
 
-## Which-Key Does Not Go Away
+When stdout is redirected, as in `$(calibre-tui)` or `calibre-tui | ...`, the interface is drawn on stderr and stdout receives only the paths printed by `Ctrl+P`. Don't redirect stderr as well, or the interface won't be visible.
 
-When a multi-key sequence is pending, press `Esc` to cancel the pending sequence. A second `Esc` quits the app in the default browser context.
+## A shortcut doesn't work
 
-## Command Completion Does Not Run Immediately
+- Press `F1` to see which bindings are in effect.
+- The terminal may not report the combination: `Ctrl+/` and `Ctrl+;` in particular are unreliable, which is why the command prompt uses `Ctrl+T`. Bind another key in [`keymap.toml`](keymap.md).
+- While the footer shows which-key hints, the next key continues the sequence. `Esc` cancels it; a second `Esc` quits.
 
-If a completion candidate is active, `Enter` applies it first. Press `Enter` again to run the completed command. When the current token is already a complete unique candidate, completion is cleared so the command can run directly.
+## `Enter` in the command prompt doesn't run the command
+
+While a completion is highlighted, `Enter` accepts it first. Press `Enter` again to run the command.

@@ -1,25 +1,20 @@
 # calibre-tui Documentation
 
-This directory contains user and configuration documentation for `calibre-tui`.
+## Using calibre-tui
 
-## Start Here
-
-- [Quick Start](quick-start.md): build, run, find a Calibre library, and open books.
-- [Controls](controls.md): default browser controls, prompt controls, mouse behavior, F1 help, and which-key.
-- [Commands](commands.md): command prompt commands such as `:sort` and `:help`.
+- [Quick Start](quick-start.md): install, find your library, and the basic workflow.
+- [Controls](controls.md): default keys in the book list, the command prompt, and the help popup.
+- [Commands](commands.md): the command prompt and the `sort` and `help` commands.
+- [Search](search.md): how matching, translators, highlighting, and result order work.
 
 ## Configuration
 
-- [Configuration](configuration.md): config file locations, commented defaults, missing-field fill-in, and incompatible-file backups.
-- [Layout](layout.md): table columns, search fields, match priority, and width ratios.
-- [Keymap](keymap.md): context-aware keymap format and supported actions.
-- [Theme](theme.md): color syntax and per-component theme fields.
+- [Configuration](configuration.md): file locations, `config.toml`, openers, and how files are updated.
+- [Layout](layout.md): columns, search fields, match priority, and widths.
+- [Keymap](keymap.md): key names, key sequences, contexts, and actions.
+- [Theme](theme.md): color values and every theme field.
 
-## Features
+## Help and Development
 
-- [Search](search.md): searchable metadata, translators, highlighting, and result ordering.
-
-## Development And Operations
-
-- [Architecture](architecture.md): module boundaries and local dependency structure.
-- [Troubleshooting](troubleshooting.md): common library, config, terminal, and key binding issues.
+- [Troubleshooting](troubleshooting.md): common library, config, terminal, and opener problems.
+- [Architecture](architecture.md): module layout and design notes for contributors.
