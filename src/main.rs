@@ -34,8 +34,7 @@ fn main() -> Result<()> {
 
   let mut terminal = terminal::enter()?;
   let result = app.run(&mut terminal);
-  drop(terminal);
-  let restored = terminal::leave();
+  let restored = terminal.restore().context("failed to restore the terminal");
   let paths = result?;
   restored?;
 

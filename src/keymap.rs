@@ -1,6 +1,7 @@
 use crate::config_file::{CommentedToml, TomlComment, app_config_dir, load_toml_or_reset};
 use anyhow::{Context, Result};
-use framework_tui::{KeyBindingConfig, KeyBindings};
+use framework_tui::KeyBindings;
+use framework_tui::keymap::{InputKeymapOptions, KeymapSection, default_input_keymap, key};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,28 +12,6 @@ pub struct KeymapConfig {
   pub detail: KeymapSection,
   pub input: KeymapSection,
   pub global: KeymapSection,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
-#[serde(default)]
-pub struct KeymapSection {
-  pub keymap: Vec<KeymapEntry>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct KeymapEntry {
-  pub on: KeymapOn,
-  pub run: String,
-  pub desc: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum KeymapOn {
-  One(String),
-  Many(Vec<String>),
 }
 
 impl Default for KeymapConfig {
@@ -89,7 +68,7 @@ impl Default for KeymapConfig {
         ],
       },
       detail: KeymapSection::default(),
-      input: default_input_keymap_section(),
+      input: default_input_keymap(&InputKeymapOptions::default()),
       global: KeymapSection {
         keymap: vec![
           key("f1", "help", "Show key bindings"),
@@ -103,10 +82,10 @@ impl Default for KeymapConfig {
 impl KeymapConfig {
   pub fn bindings(&self) -> KeyBindings {
     KeyBindings::from_sections(
-      binding_configs(&self.browser.keymap),
-      binding_configs(&self.detail.keymap),
-      binding_configs(&self.input.keymap),
-      binding_configs(&self.global.keymap),
+      self.browser.binding_configs(),
+      self.detail.binding_configs(),
+      self.input.binding_configs(),
+      self.global.binding_configs(),
     )
   }
 }
@@ -173,70 +152,4 @@ pub fn load_keymap() -> Result<KeyBindings> {
     .with_context(|| format!("failed to load keymap file '{}'", keymap_path.display()))?;
 
   Ok(config.bindings())
-}
-
-fn default_input_keymap_section() -> KeymapSection {
-  KeymapSection {
-    keymap: vec![
-      key("f1", "help", "Show key bindings"),
-      key("esc", "cancel", "Cancel input"),
-      key("enter", "submit", "Submit input"),
-      key("backspace", "backspace", "Delete before cursor"),
-      key("delete", "delete", "Delete under cursor"),
-      key("left", "move_left", "Move cursor left"),
-      key("right", "move_right", "Move cursor right"),
-      key("home", "move_start", "Move cursor to start"),
-      key("ctrl-a", "move_start", "Move cursor to start"),
-      key("end", "move_end", "Move cursor to end"),
-      key("ctrl-e", "move_end", "Move cursor to end"),
-      key("ctrl-u", "kill_before_cursor", "Delete before cursor"),
-      key("ctrl-k", "kill_after_cursor", "Delete after cursor"),
-      key("tab", "completion_next", "Select next completion"),
-      key(
-        "backtab",
-        "completion_previous",
-        "Select previous completion",
-      ),
-      key("up", "history_previous", "Previous command history"),
-      key("down", "history_next", "Next command history"),
-    ],
-  }
-}
-
-fn binding_configs(entries: &[KeymapEntry]) -> Vec<KeyBindingConfig> {
-  entries
-    .iter()
-    .map(|entry| KeyBindingConfig {
-      on: keymap_on_values(&entry.on),
-      action: entry.run.clone(),
-      desc: entry.desc.clone(),
-    })
-    .collect()
-}
-
-fn keymap_on_values(on: &KeymapOn) -> Vec<String> {
-  match on {
-    KeymapOn::One(value) => vec![value.clone()],
-    KeymapOn::Many(values) => values.clone(),
-  }
-}
-
-fn key(on: impl Into<KeymapOn>, run: &str, desc: &str) -> KeymapEntry {
-  KeymapEntry {
-    on: on.into(),
-    run: run.to_string(),
-    desc: desc.to_string(),
-  }
-}
-
-impl From<&str> for KeymapOn {
-  fn from(value: &str) -> Self {
-    Self::One(value.to_string())
-  }
-}
-
-impl<const N: usize> From<[&str; N]> for KeymapOn {
-  fn from(values: [&str; N]) -> Self {
-    Self::Many(values.into_iter().map(str::to_string).collect())
-  }
 }

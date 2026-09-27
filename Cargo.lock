@@ -552,6 +552,8 @@ version = "0.1.0"
 dependencies = [
  "crossterm",
  "ratatui",
+ "serde",
+ "signal-hook",
  "unicode-width",
 ]
 
