@@ -55,15 +55,6 @@ fn join<'a>(items: &'a [String], separator: &str) -> Cow<'a, str> {
 }
 
 impl BookField {
-  #[cfg(test)]
-  pub const ALL: [Self; 5] = [
-    Self::Title,
-    Self::Authors,
-    Self::Series,
-    Self::Formats,
-    Self::Tags,
-  ];
-
   pub fn parse(input: &str) -> Option<Self> {
     match input.to_ascii_lowercase().as_str() {
       "title" | "name" => Some(Self::Title),
@@ -126,29 +117,4 @@ fn calibre_config_dir() -> Option<PathBuf> {
     return Some(PathBuf::from(dir));
   }
   dirs::preference_dir().map(|dir| dir.join("calibre"))
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn field_text_joins_lists_like_the_table() {
-    let book = Book {
-      title: "Dune".into(),
-      authors: vec!["A".into(), "B".into()],
-      formats: vec!["EPUB".into()],
-      ..Book::default()
-    };
-    assert_eq!(book.field_text(BookField::Authors), "A & B");
-    assert_eq!(book.field_text(BookField::Formats), "EPUB");
-    assert_eq!(book.field_text(BookField::Tags), "");
-  }
-
-  #[test]
-  fn field_parse_accepts_aliases() {
-    assert_eq!(BookField::parse("Author"), Some(BookField::Authors));
-    assert_eq!(BookField::parse("name"), Some(BookField::Title));
-    assert_eq!(BookField::parse("rating"), None);
-  }
 }

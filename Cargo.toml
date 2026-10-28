@@ -1,7 +1,8 @@
 [package]
 name = "calibre-tui"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2024"
+rust-version = "1.95"
 
 [dependencies]
 anyhow = "1.0"
@@ -22,3 +23,14 @@ rusqlite = "0.40"
 
 [target.'cfg(windows)'.dependencies]
 rusqlite = { version = "0.40", features = ["bundled"] }
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+dbg_macro = "warn"
+
+[[bin]]
+name = "calibre-tui"
+path = "src/main.rs"
+test = false

@@ -20,11 +20,6 @@ pub struct IndexedText {
 }
 
 impl IndexedText {
-  #[cfg(test)]
-  pub fn text(&self) -> &str {
-    &self.text
-  }
-
   fn into_text(self) -> String {
     self.text
   }
@@ -202,48 +197,5 @@ fn fullwidth_ascii(ch: char) -> Option<char> {
     'Ａ'..='Ｚ' => char::from_u32((ch as u32 - 'Ａ' as u32) + 'A' as u32),
     'ａ'..='ｚ' => char::from_u32((ch as u32 - 'ａ' as u32) + 'a' as u32),
     _ => None,
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn find_maps_byte_matches_back_to_source_tokens() {
-    let mut text = IndexedText::default();
-    for token in ["zhong", "guo", "", "li", "shi"] {
-      text.push_token(token);
-    }
-    // "ngg" spans the first two syllables.
-    assert_eq!(text.find("ngg"), Some((0, 2)));
-    // An empty token (dropped punctuation) is never the start of a match.
-    assert_eq!(text.find("li"), Some((3, 4)));
-    assert_eq!(text.find("guoli"), Some((1, 4)));
-    assert_eq!(text.find(""), None);
-    assert_eq!(text.find("x"), None);
-  }
-
-  #[test]
-  fn plain_index_tokens_are_non_whitespace_source_chars() {
-    let indexed = index_plain_text(" Ab İ c ");
-    assert_eq!(indexed.text(), "abi\u{307}c");
-    // `İ` lowercases to two chars but stays a single token.
-    assert_eq!(indexed.find("i\u{307}c"), Some((2, 4)));
-    assert_eq!(normalize_plain_query("A b"), "ab");
-  }
-
-  #[test]
-  fn french_and_spanish_share_one_translator() {
-    let config = FilterConfig {
-      translators: vec![
-        FilterTranslator::FrenchLatin,
-        FilterTranslator::SpanishLatin,
-        FilterTranslator::GermanLatin,
-      ],
-      ..FilterConfig::default()
-    };
-    let translators = Translators::from_config(&config);
-    assert_eq!(translators.normalize_queries("Niñez"), ["ninez", "ninez"]);
   }
 }

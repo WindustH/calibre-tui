@@ -1,5 +1,6 @@
 use crate::config_file::{CommentedToml, TomlComment, app_config_dir, load_toml_or_reset};
 use anyhow::Result;
+use framework_tui::theme::parse_color;
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 
@@ -346,63 +347,4 @@ pub fn load_theme() -> Result<Theme> {
   let config_dir = app_config_dir()?;
   let theme_path = config_dir.join("theme.toml");
   load_toml_or_reset(&theme_path, Theme::default(), "theme")
-}
-
-fn parse_color(value: &str) -> Color {
-  let lower = value.trim().to_ascii_lowercase();
-  match lower.as_str() {
-    "reset" => Color::Reset,
-    "black" => Color::Black,
-    "red" => Color::Red,
-    "green" => Color::Green,
-    "yellow" => Color::Yellow,
-    "blue" => Color::Blue,
-    "magenta" => Color::Magenta,
-    "cyan" => Color::Cyan,
-    "gray" | "grey" => Color::Gray,
-    "dark_gray" | "dark_grey" | "darkgray" | "darkgrey" => Color::DarkGray,
-    "light_red" | "lightred" => Color::LightRed,
-    "light_green" | "lightgreen" => Color::LightGreen,
-    "light_yellow" | "lightyellow" => Color::LightYellow,
-    "light_blue" | "lightblue" => Color::LightBlue,
-    "light_magenta" | "lightmagenta" => Color::LightMagenta,
-    "light_cyan" | "lightcyan" => Color::LightCyan,
-    "white" => Color::White,
-    _ => {
-      if let Some(raw) = lower.strip_prefix("ansi:") {
-        return raw
-          .parse::<u8>()
-          .map(Color::Indexed)
-          .unwrap_or(Color::Reset);
-      }
-      if let Some(hex) = lower.strip_prefix('#')
-        && hex.len() == 6
-        && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
-        && let Ok(rgb) = u32::from_str_radix(hex, 16)
-      {
-        let [_, r, g, b] = rgb.to_be_bytes();
-        return Color::Rgb(r, g, b);
-      }
-      Color::Reset
-    }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn parses_named_indexed_and_rgb_colors() {
-    assert_eq!(parse_color(" Dark_Grey "), Color::DarkGray);
-    assert_eq!(parse_color("ansi:236"), Color::Indexed(236));
-    assert_eq!(parse_color("#FFaa00"), Color::Rgb(255, 170, 0));
-  }
-
-  #[test]
-  fn invalid_colors_fall_back_to_reset() {
-    for value in ["#a€bc", "#12345", "#12345g", "ansi:256", "purple", ""] {
-      assert_eq!(parse_color(value), Color::Reset, "{value:?}");
-    }
-  }
 }

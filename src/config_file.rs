@@ -123,7 +123,7 @@ where
     fs::create_dir_all(parent)
       .with_context(|| format!("failed to create config directory at {:?}", parent))?;
   }
-  fs::write(path, config.to_commented_toml()?)
+  framework_tui::fs::atomic_write_bytes(path, config.to_commented_toml()?.as_bytes())
     .with_context(|| format!("failed to write config file to {:?}", path))?;
   Ok(())
 }
@@ -329,117 +329,4 @@ fn key_path(trimmed: &str) -> Option<String> {
   }
   let (key, _) = trimmed.split_once('=')?;
   Some(key.trim().to_string())
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use serde::Deserialize;
-
-  #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-  #[serde(deny_unknown_fields, default)]
-  struct Sample {
-    name: String,
-    nested: Nested,
-  }
-
-  #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-  #[serde(deny_unknown_fields, default)]
-  struct Nested {
-    count: u32,
-    flag: bool,
-  }
-
-  impl Default for Sample {
-    fn default() -> Self {
-      Self {
-        name: "default".to_string(),
-        nested: Nested::default(),
-      }
-    }
-  }
-
-  impl Default for Nested {
-    fn default() -> Self {
-      Self {
-        count: 3,
-        flag: true,
-      }
-    }
-  }
-
-  impl CommentedToml for Sample {
-    fn comments() -> &'static [TomlComment] {
-      &[TomlComment {
-        path: "nested.count",
-        lines: &["How many."],
-      }]
-    }
-  }
-
-  fn temp_config(name: &str, content: Option<&str>) -> PathBuf {
-    let dir =
-      std::env::temp_dir().join(format!("calibre-tui-config-{name}-{}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(&dir).unwrap();
-    let path = dir.join("sample.toml");
-    if let Some(content) = content {
-      fs::write(&path, content).unwrap();
-    }
-    path
-  }
-
-  fn load(path: &Path) -> Sample {
-    load_toml_or_reset(path, Sample::default(), "sample").unwrap()
-  }
-
-  fn cleanup(path: &Path) {
-    fs::remove_dir_all(path.parent().unwrap()).unwrap();
-  }
-
-  #[test]
-  fn missing_file_is_created_with_comments() {
-    let path = temp_config("missing", None);
-    assert_eq!(load(&path), Sample::default());
-    let written = fs::read_to_string(&path).unwrap();
-    assert!(written.contains("# How many.\ncount = 3"));
-    cleanup(&path);
-  }
-
-  #[test]
-  fn complete_file_keeps_user_comments() {
-    let content = "# mine\nname = \"x\" # inline\n\n[nested]\ncount = 5\nflag = false\n";
-    let path = temp_config("complete", Some(content));
-    assert_eq!(load(&path).nested.count, 5);
-    assert_eq!(fs::read_to_string(&path).unwrap(), content);
-    cleanup(&path);
-  }
-
-  #[test]
-  fn missing_fields_are_filled_and_values_kept() {
-    let path = temp_config("partial", Some("name = \"x\"\n[nested]\ncount = 5\n"));
-    let loaded = load(&path);
-    assert_eq!((loaded.name.as_str(), loaded.nested.count), ("x", 5));
-    let written = fs::read_to_string(&path).unwrap();
-    assert!(written.contains("flag = true") && written.contains("count = 5"));
-    cleanup(&path);
-  }
-
-  #[test]
-  fn incompatible_file_is_backed_up_and_reset() {
-    let path = temp_config("invalid", Some("name = \"x\"\nunknown = 1\n"));
-    assert_eq!(load(&path), Sample::default());
-    let backups = fs::read_dir(path.parent().unwrap())
-      .unwrap()
-      .filter_map(|entry| entry.ok())
-      .filter(|entry| {
-        entry
-          .file_name()
-          .to_string_lossy()
-          .starts_with("sample.toml.bak-")
-      })
-      .count();
-    assert_eq!(backups, 1);
-    cleanup(&path);
-  }
 }

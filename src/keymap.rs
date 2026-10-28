@@ -148,8 +148,18 @@ impl CommentedToml for KeymapConfig {
 pub fn load_keymap() -> Result<KeyBindings> {
   let config_dir = app_config_dir()?;
   let keymap_path = config_dir.join("keymap.toml");
-  let config: KeymapConfig = load_toml_or_reset(&keymap_path, KeymapConfig::default(), "keymap")
-    .with_context(|| format!("failed to load keymap file '{}'", keymap_path.display()))?;
+  let mut config: KeymapConfig =
+    load_toml_or_reset(&keymap_path, KeymapConfig::default(), "keymap")
+      .with_context(|| format!("failed to load keymap file '{}'", keymap_path.display()))?;
 
+  let defaults = KeymapConfig::default();
+  let before = config.to_commented_toml()?;
+  config.browser.append_missing_actions(&defaults.browser);
+  config.detail.append_missing_actions(&defaults.detail);
+  config.input.append_missing_actions(&defaults.input);
+  config.global.append_missing_actions(&defaults.global);
+  if before != config.to_commented_toml()? {
+    framework_tui::fs::atomic_write_bytes(&keymap_path, config.to_commented_toml()?.as_bytes())?;
+  }
   Ok(config.bindings())
 }
