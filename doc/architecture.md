@@ -38,3 +38,5 @@ The event loop blocks until input arrives, handles all queued events, and redraw
 ## Configuration Files
 
 Each config struct is its own serde schema with defaults, and implements `CommentedToml` to attach comments by field path. `config_file::load_toml_or_reset_with` writes missing files, fills in missing settings (rewriting the file only then), and backs up files that fail to parse or validate. `layout.toml` is validated and compiled into a `Layout`; `keymap.toml` becomes `framework_tui::KeyBindings`.
+
+Command prompts, completion lists, status messages, and which-key hints use overlay surfaces: showing or dismissing them does not resize the main content viewport. Permanent navigation (the music tab bar and Calibre search header) keeps its existing position.

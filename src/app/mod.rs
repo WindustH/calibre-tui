@@ -27,6 +27,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub struct App {
+  overlay_areas: [ratatui::layout::Rect; 2],
   books: Vec<Book>,
   search: BookSearch,
   order: BookOrder,
@@ -72,6 +73,7 @@ impl App {
     let order = BookOrder::new(SortSpec::default(), &books);
 
     let mut app = Self {
+      overlay_areas: [ratatui::layout::Rect::default(); 2],
       books,
       search,
       order,
@@ -146,8 +148,9 @@ impl App {
         },
       ));
     })?;
-    if let Some(viewport) = viewport {
-      self.browser.set_viewport(viewport);
+    if let Some(output) = viewport {
+      self.browser.set_viewport(output.viewport);
+      self.overlay_areas = output.overlays;
     }
     Ok(())
   }
@@ -172,11 +175,19 @@ impl App {
         }
         _ => Flow::Idle,
       },
-      Event::Mouse(mouse) if browsing => match mouse.kind {
-        MouseEventKind::ScrollDown => self.run_action("move_down"),
-        MouseEventKind::ScrollUp => self.run_action("move_up"),
-        _ => Flow::Idle,
-      },
+      Event::Mouse(mouse)
+        if browsing
+          && !self
+            .overlay_areas
+            .iter()
+            .any(|area| area.contains((mouse.column, mouse.row).into())) =>
+      {
+        match mouse.kind {
+          MouseEventKind::ScrollDown => self.run_action("move_down"),
+          MouseEventKind::ScrollUp => self.run_action("move_up"),
+          _ => Flow::Idle,
+        }
+      }
       Event::Resize(..) => Flow::Redraw,
       _ => Flow::Idle,
     }

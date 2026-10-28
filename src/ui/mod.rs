@@ -35,8 +35,13 @@ pub struct View<'a> {
   pub message: Option<&'a str>,
 }
 
-/// Draw the whole screen; returns the table rows that were shown.
-pub fn draw(frame: &mut Frame, view: &View<'_>) -> TableViewport {
+pub struct DrawOutput {
+  pub viewport: TableViewport,
+  pub overlays: [Rect; 2],
+}
+
+/// Draw with stable table geometry and report floating pointer surfaces.
+pub fn draw(frame: &mut Frame, view: &View<'_>) -> DrawOutput {
   let area = frame.area();
   let theme = view.theme;
   frame.render_widget(
@@ -64,30 +69,43 @@ pub fn draw(frame: &mut Frame, view: &View<'_>) -> TableViewport {
   let chunks = TuiLayout::default()
     .direction(Direction::Vertical)
     .margin(1)
-    .constraints([
-      Constraint::Length(3),
-      Constraint::Length(completion_height),
-      Constraint::Min(0),
-      Constraint::Length(footer_height),
-    ])
+    .constraints([Constraint::Length(3), Constraint::Min(0)])
     .split(area);
 
+  let viewport = table::draw_table(frame, chunks[1], &view.table, view.layout, theme);
   match view.prompt {
     Some(prompt) => draw_command_input(frame, chunks[0], prompt, view.completion, theme),
     None => draw_search_input(frame, chunks[0], view),
   }
-  let viewport = table::draw_table(frame, chunks[2], &view.table, view.layout, theme);
+  let completion_area = Rect::new(
+    chunks[1].x,
+    chunks[1].y,
+    chunks[1].width,
+    completion_height.min(chunks[1].height),
+  );
+  let footer_height = footer_height.min(chunks[1].height);
+  let footer_area = Rect::new(
+    chunks[1].x,
+    chunks[1].bottom().saturating_sub(footer_height),
+    chunks[1].width,
+    footer_height,
+  );
   if view.prompt.is_some()
     && let Some(completion) = view.completion
   {
-    draw_command_completion(frame, chunks[1], completion, theme);
+    frame.render_widget(ratatui::widgets::Clear, completion_area);
+    draw_command_completion(frame, completion_area, completion, theme);
   }
-  draw_footer(frame, chunks[3], view.key_hints, view.message, theme);
+  frame.render_widget(ratatui::widgets::Clear, footer_area);
+  draw_footer(frame, footer_area, view.key_hints, view.message, theme);
 
   if let Some(entries) = view.key_help {
     draw_key_help(frame, area, entries, theme);
   }
-  viewport
+  DrawOutput {
+    viewport,
+    overlays: [completion_area, footer_area],
+  }
 }
 
 fn draw_search_input(frame: &mut Frame, area: Rect, view: &View<'_>) {
